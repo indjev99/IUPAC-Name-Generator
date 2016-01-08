@@ -1287,7 +1287,7 @@ int main()
     setDictionaries();
 
     cout<<"Use the Middle Mouse Button to start or continue chains.\nUse the Left Mouse Button to end chains and to move atoms,"
-    <<"\nUse the right mouse button to cancel chains and remove atoms.\nPress Backspace to undo.\nPress Shift to toggle snapping on and off."
+    <<"\nUse the Right mouse button to cancel chains and remove atoms.\nPress Backspace to undo.\nPress Shift to toggle snapping on and off."
     <<"\nPress R to reset.\nPress Escape to end the program.\nPress any key to continue."<<endl;
     getch();
 
