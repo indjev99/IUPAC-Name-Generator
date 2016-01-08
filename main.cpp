@@ -1,4 +1,4 @@
-//IUPAC
+//IUPAC Name Generator
 #include<iostream>
 #include<algorithm>
 #include<vector>
@@ -17,6 +17,7 @@ double TEXT_COLOUR_R=0;
 double TEXT_COLOUR_G=0;
 double TEXT_COLOUR_B=0;
 double BACKGROUND_COLOUR_R=1;
+double BACKGROUND_COLOUR_R2=1;
 double BACKGROUND_COLOUR_G=1;
 double BACKGROUND_COLOUR_B=1;
 
@@ -26,14 +27,38 @@ double mxpos=0,mypos=0;
 
 bool snappingEnabled=1;
 
+struct dictionary
+{
+    vector<string> CNB; //carbon_number_bases
+    vector<string> SNP; //substituent_number_prefixes
+    vector<string> FGTS; //functional_group_type_suffixes
+    string SS; //substituent_suffix
+    string CP; //cycle_prefix
+    string NC; //not_connected
+
+    string getCNB(int CN)
+    {
+        if (CN>=CNB.size()) CN=0;
+        return CNB[CN];
+    }
+    string getSNP(int ST)
+    {
+        if (ST>=SNP.size()) ST=0;
+        return SNP[ST];
+    }
+};
+
+dictionary English,curr_dict;
+
+bool cmpBySubName(pair<int, int> a, pair<int, int> b)
+{
+    return curr_dict.getSNP(a.second)<curr_dict.getSNP(b.second);
+}
+
 struct connection
 {
     vector<int> spots_taken;
     int to;
-};
-struct dictionary
-{
-    vector<string> prefix;
 };
 struct atom
 {
@@ -42,7 +67,7 @@ struct atom
     vector<connection> connections;
     stack<int> free_connections;
 
-    void connect(int connection)
+    int connect(int connection)
     {
         if (!free_connections.empty())
         {
@@ -51,10 +76,12 @@ struct atom
             {
                 nc=free_connections.top();
             }
+            else if (symbol=="C" && connections[nc].spots_taken.size()==connections.size()-1) return -1;
             connections[nc].to=connection;
             connections[nc].spots_taken.push_back(free_connections.top());
             free_connections.pop();
         }
+        return 1;
     }
     int isConnected(int connection)
     {
@@ -155,8 +182,7 @@ struct compound
         if (a1<atoms.size() && a2<atoms.size() && a1!=a2 && atoms[a1].symbol!="" && atoms[a2].symbol!="" && !atoms[a1].free_connections.empty() && !atoms[a2].free_connections.empty())
         {
             atoms[a1].connect(a2);
-            atoms[a2].connect(a1);
-            return 1;
+            return atoms[a2].connect(a1);
         }
         return -1;
     }
@@ -216,6 +242,401 @@ struct compound
     compound(string new_symbol, int new_valance, double new_x, double new_y)
     {
         addAtom(new_symbol,new_valance,new_x,new_y);
+    }
+
+    int isConnected()
+    {
+        int cycle=0,vc;
+        atom a;
+        stack<int> st;
+        vector<bool> vis;
+        int s=-1;
+        vis.resize(atoms.size());
+        for (int i=0;i<atoms.size();++i)
+        {
+            vis[i]=0;
+            if (s==-1 && atoms[i].symbol!="") s=i;
+        }
+        if (s==-1) return 0;
+        st.push(s);
+        vis[s]=1;
+        while (!st.empty())
+        {
+            s=st.top();
+            st.pop();
+            a=atoms[s];
+            vc=0;
+            for (int i=0;i<a.connections.size();++i)
+            {
+                s=a.connections[i].to;
+                if (s!=-1 && atoms[s].symbol!="")
+                {
+                    if (!vis[s])
+                    {
+                        st.push(s);
+                        vis[s]=1;
+                    }
+                    else ++vc;
+                }
+            }
+            if (vc>1) cycle=1;
+        }
+        for (int i=0;i<atoms.size();++i)
+        {
+            if (atoms[i].symbol!="" && !vis[i]) return 0;
+        }
+        return 1+cycle;
+    }
+    int findMaxCon()
+    {
+        atom a;
+        int maxcon=1;
+        for (int i=0;i<atoms.size();++i)
+        {
+            a=atoms[i];
+            if (a.symbol=="C") for (int j=0;j<a.connections.size();++j)
+            {
+                if (a.connections[j].to!=-1 && atoms[a.connections[j].to].symbol=="C" && a.connections[j].spots_taken.size()>maxcon) maxcon=a.connections[j].spots_taken.size();
+            }
+        }
+        return maxcon;
+    }
+    string getNameStupid(int CS)
+    {
+        string name="";
+        if (CS==2) name="cyclo";
+        name+=curr_dict.getCNB(atoms.size()-free_positions.size());
+        name+=curr_dict.FGTS[findMaxCon()];
+        return name;
+    }
+    pair<vector<int>, int> findFarthest(int s)
+    {
+        vector<int> maxDistAtoms;
+        pair<vector<int>, int> ans;
+        int maxDist=-1;
+        atom a;
+        stack<pair<int, int> > st;
+        vector<bool> vis;
+        pair<int, int> curr;
+        vis.resize(atoms.size());
+        for (int i=0;i<vis.size();++i) vis[i]=0;
+        curr.first=s;
+        curr.second=0;
+        st.push(curr);
+        vis[s]=1;
+        while (!st.empty())
+        {
+            curr=st.top();
+            st.pop();
+            if (curr.second>maxDist)
+            {
+                maxDist=curr.second;
+                maxDistAtoms.resize(0);
+            }
+            if (curr.second==maxDist) maxDistAtoms.push_back(curr.first);
+            a=atoms[curr.first];
+            ++curr.second;
+            for (int i=0;i<a.connections.size();++i)
+            {
+                s=a.connections[i].to;
+                if (s!=-1 && atoms[s].symbol!="" && !vis[s])
+                {
+                    curr.first=s;
+                    vis[s]=1;
+                    st.push(curr);
+                }
+            }
+        }
+        ans.first=maxDistAtoms;
+        ans.second=maxDist;
+        return ans;
+    }
+    vector<int> findPathFrom(int s)
+    {
+        atom a;
+        int s2;
+        stack<int> st;
+        vector<int> prev;
+        prev.resize(atoms.size());
+        for (int i=0;i<prev.size();++i) prev[i]=-2;
+        st.push(s);
+        prev[s]=-1;
+        while (!st.empty())
+        {
+            s=st.top();
+            st.pop();
+            a=atoms[s];
+            for (int i=0;i<a.connections.size();++i)
+            {
+                s2=a.connections[i].to;
+                if (s2!=-1 && atoms[s2].symbol!="" && prev[s2]==-2)
+                {
+                    prev[s2]=s;
+                    st.push(s2);
+                }
+            }
+        }
+        return prev;
+    }
+    int findSubType(vector<int> parent_chain, int s)
+    {
+        int subSize=0;
+        atom a;
+        int s2;
+        stack<int> st;
+        vector<bool> vis;
+        vis.resize(atoms.size());
+        for (int i=0;i<vis.size();++i) vis[i]=0;
+        for (int i=0;i<parent_chain.size();++i) vis[parent_chain[i]]=1;
+        st.push(s);
+        vis[s]=1;
+        while (!st.empty())
+        {
+            s=st.top();
+            st.pop();
+            ++subSize;
+            a=atoms[s];
+            for (int i=0;i<a.connections.size();++i)
+            {
+                s=a.connections[i].to;
+                if (s!=-1 && atoms[s].symbol!="" && !vis[s])
+                {
+                    vis[s]=1;
+                    st.push(s);
+                }
+            }
+        }
+        return subSize;
+    }
+    vector<pair<int, int> > findSubstituents(vector<int> parent_chain)
+    {
+        atom a;
+        vector<pair<int, int> > subs;
+        pair<int, int> sub;
+        for (int i=1;i<parent_chain.size()-1;++i)
+        {
+            a=atoms[parent_chain[i]];
+            for (int j=0;j<a.connections.size();++j)
+            {
+                if (a.connections[j].to!=-1 && a.connections[j].to!=parent_chain[i-1] && a.connections[j].to!=parent_chain[i+1])
+                {
+                    sub.first=i+1;
+                    sub.second=findSubType(parent_chain,a.connections[j].to);
+                    subs.push_back(sub);
+                }
+            }
+        }
+        return subs;
+    }
+    string intToString(int num)
+    {
+        string ans2="",ans;
+        do
+        {
+            ans2+=num%10+'0';
+            num/=10;
+        }
+        while (num!=0);
+        ans=ans2;
+        for (int i=0;i<ans.size();++i)
+        {
+            ans[i]=ans2[ans2.size()-1-i];
+        }
+        return ans;
+    }
+    string findSP(vector<int> pos, int t) //find substituents_prefix
+    {
+        string prefix="";
+        if (t==-1 || pos.size()==0) return prefix;
+        for (int i=0;i<pos.size();++i)
+        {
+            if (i>0) prefix+=',';
+            prefix+=intToString(pos[i]);
+        }
+        prefix+='-';
+        if (pos.size()>1) prefix+=curr_dict.getSNP(pos.size());
+        prefix+=curr_dict.getCNB(t);
+        prefix+=curr_dict.SS;
+        return prefix;
+    }
+    string findSPs(vector<pair<int, int> > subs)//find substituents_prefixes
+    {
+        string prefixes="";
+        vector<int> currPos;
+        if (subs.size()==0) return prefixes;
+        sort(subs.begin(),subs.end(),cmpBySubName);
+        int curr=subs[0].second;
+        for (int i=0;i<subs.size();++i)
+        {
+            if (subs[i].second!=curr)
+            {
+                prefixes+=findSP(currPos,curr);
+                prefixes+='-';
+                currPos.resize(0);
+                curr=subs[i].second;
+            }
+            currPos.push_back(subs[i].first);
+        }
+        prefixes+=findSP(currPos,curr);
+        return prefixes;
+    }
+    vector<int> directParentChain(vector<int> parent_chain)
+    {
+        atom a;
+        vector<int> parent_chain2;
+        vector<pair<int, int> > subs1;
+        vector<pair<int, int> > subs2;
+        parent_chain2.resize(parent_chain.size());
+        for (int i=0;i<parent_chain.size();++i)
+        {
+            parent_chain2[parent_chain.size()-1-i]=parent_chain[i];
+        }
+        subs1=findSubstituents(parent_chain);
+        subs2=findSubstituents(parent_chain2);
+        for (int i=0;i<subs1.size();++i)
+        {
+            if (subs1[i].first<subs2[i].first)
+            {
+                break;
+            }
+            if (subs1[i].first>subs2[i].first)
+            {
+                parent_chain=parent_chain2;
+                break;
+            }
+        }
+        return parent_chain;
+    }
+    vector<int> findParentChain()
+    {
+        atom a;
+        pair<vector<int>, int> candidates,candidates2;
+        vector<pair<int, int> > finalCandidates;
+        pair<int, int> currCandidate;
+        vector<int> parent_chain={0};
+        vector<int> prev;
+        vector<vector<int> > candidateParrentChains;
+        vector<vector<int> > candidateParrentChains2;
+        int maxSideChains=-1;
+        int curr;
+        int maxDist=-1;
+        int starting_atom;
+        for (int i=0;i<atoms.size();++i)
+        {
+            if (atoms[i].symbol!="")
+            {
+                starting_atom=i;
+                break;
+            }
+        }
+        candidates=findFarthest(starting_atom);
+        for (int i=0;i<candidates.first.size();++i)
+        {
+            candidates2=findFarthest(candidates.first[i]);
+            if (candidates2.second>maxDist)
+            {
+                maxDist=candidates2.second;
+                finalCandidates.resize(0);
+            }
+            if (candidates2.second==maxDist)
+            {
+                currCandidate.first=candidates.first[i];
+                for (int i=0;i<candidates2.first.size();++i)
+                {
+                    currCandidate.second=candidates2.first[i];
+                    finalCandidates.push_back(currCandidate);
+                }
+            }
+        }
+        for (int i=0;i<finalCandidates.size();++i)
+        {
+            if (finalCandidates[i].first>finalCandidates[i].second) swap(finalCandidates[i].first,finalCandidates[i].second);
+        }
+        sort(finalCandidates.begin(),finalCandidates.end());
+        for (int i=0;i<finalCandidates.size();++i)
+        {
+            if (i==0 || finalCandidates[i].first!=finalCandidates[i-1].first)
+            {
+                prev=findPathFrom(finalCandidates[i].first);
+            }
+            if (i==0 || finalCandidates[i].first!=finalCandidates[i-1].first || finalCandidates[i].second!=finalCandidates[i-1].second)
+            {
+                parent_chain.resize(0);
+                curr=finalCandidates[i].second;
+                while (curr!=-1)
+                {
+                    parent_chain.push_back(curr);
+                    curr=prev[curr];
+                }
+                candidateParrentChains.push_back(parent_chain);
+            }
+        }
+        int sideChains;
+        for (int i=0;i<candidateParrentChains.size();++i)
+        {
+            sideChains=0;
+            parent_chain=candidateParrentChains[i];
+            for (int j=1;j<parent_chain.size()-1;++j)
+            {
+                a=atoms[parent_chain[j]];
+                for (int o=0;o<a.connections.size();++o)
+                {
+                    if (a.connections[o].to!=-1 && a.connections[o].to!=parent_chain[j-1] && a.connections[o].to!=parent_chain[j+1]) ++sideChains;
+                }
+            }
+            if (sideChains>maxSideChains)
+            {
+                maxSideChains=sideChains;
+                candidateParrentChains2.resize(0);
+            }
+            if (sideChains==maxSideChains)
+            {
+                candidateParrentChains2.push_back(parent_chain);
+            }
+        }
+        /*cout<<"Candidate parent chains: "<<candidateParrentChains2.size()<<endl;
+        for (int i=0;i<candidateParrentChains2.size();++i)
+        {
+            parent_chain=candidateParrentChains2[i];
+            for (int j=0;j<parent_chain.size();++j)
+            {
+                cout<<parent_chain[j]<<" ";
+            }
+            cout<<endl;
+        }*/
+        parent_chain=candidateParrentChains2[0];
+        return parent_chain;
+    }
+    string getName1()
+    {
+        string name;
+        vector<int> parent_chain;
+        vector<pair<int, int> > subs;
+        parent_chain=findParentChain();
+        parent_chain=directParentChain(parent_chain);
+        subs=findSubstituents(parent_chain);
+        name=findSPs(subs);
+        name+=curr_dict.getCNB(parent_chain.size());
+        name+=curr_dict.FGTS[findMaxCon()];
+        return name;
+    }
+    string getName()
+    {
+        string name;
+        int CS=isConnected(); //connection_status
+        if (!CS) return curr_dict.NC;
+        if (CS==2) name=getNameStupid(CS);
+        else name=getName1();
+
+        for (int i=0;i<name.size();++i)
+        {
+            if (name[i]>='a' && name[i]<='z')
+            {
+                name[i]+='A'-'a';
+                break;
+            }
+        }
+        return name;
     }
 };
 
@@ -389,11 +810,12 @@ double drawSymbol(string symbol, double x, double y, bool centered)
 }
 void drawIndex(int index, double x, double y)
 {
+    if (index<=1) return;
     vector<int> digits;
     do
     {
-        digits.push_back(index%2);
-        index/=2;
+        digits.push_back(index%10);
+        index/=10;
     }
     while (index!=0);
     for (int i=digits.size()-1;i>=0;--i)
@@ -412,6 +834,150 @@ void drawIndex(int index, double x, double y)
             glEnd();
 
             x+=0.01;
+        }
+        if (digits[i]==9)
+        {
+            glBegin(GL_QUADS);
+
+            glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+            glVertex2f(x,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);;
+
+            glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
+
+            glVertex2f(x,y);
+            glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
+            glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glVertex2f(x,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glEnd();
+
+            x+=0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        }
+        if (digits[i]==4)
+        {
+            glBegin(GL_QUADS);
+
+            glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+            glVertex2f(x,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);;
+
+            glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
+
+            glVertex2f(x,y);
+            glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
+            glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glVertex2f(x,y);
+            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
+            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glEnd();
+
+            x+=0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        }
+        if (digits[i]==3)
+        {
+            glBegin(GL_QUADS);
+
+            glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+            glVertex2f(x,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0375*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0375*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);;
+
+            glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
+
+            glVertex2f(x,y);
+            glVertex2f(x+0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
+            glVertex2f(x+0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+            glVertex2f(x,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glVertex2f(x,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glEnd();
+
+            x+=0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        }
+        if (digits[i]==2)
+        {
+            glBegin(GL_QUADS);
+
+            glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+            glVertex2f(x,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0375*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0375*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);;
+
+            glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
+
+            glVertex2f(x,y);
+            glVertex2f(x+0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
+            glVertex2f(x+0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+            glVertex2f(x,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+            glEnd();
+
+            x+=0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
         }
         if (digits[i]==1)
         {
@@ -482,10 +1048,10 @@ void drawAtom(atom& a)
 
         glBegin(GL_QUADS);
 
-        glVertex2f(a.x,a.y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(a.x+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(a.x+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(a.x,a.y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
 
         glEnd();
 
@@ -511,7 +1077,8 @@ void drawCompound(GLFWwindow* w, compound& c)
     atom a,a2;
 
     //background
-    glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+    //glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+    glColor3f(BACKGROUND_COLOUR_R2,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
     glBegin(GL_QUADS);
 
@@ -600,6 +1167,8 @@ void run(GLFWwindow* w)
     int result;
     while (!glfwWindowShouldClose(w))
     {
+        system("cls");
+        cout<<c.getName()<<endl;
         drawWindow(w,c);
         if (pressed==-3)
         {
@@ -610,14 +1179,15 @@ void run(GLFWwindow* w)
         }
         if (pressed==-5)
         {
-            c_old=c;
+            /*c_old=c;
             last2=-1;
             last=-1;
             toMove=0;
             sx=0;
             sy=0;
             if (snappingEnabled) snap(sx,sy);
-            c=*(new compound(carbonSymbol,4,sx,sy));
+            c=*(new compound(carbonSymbol,4,sx,sy));*/
+            BACKGROUND_COLOUR_R2=!BACKGROUND_COLOUR_R2;
         }
         last=c.findAtom(mxpos,mypos);
         if (snappingEnabled) snap(mxpos,mypos);
@@ -694,26 +1264,46 @@ void run(GLFWwindow* w)
         }
     }
 }
+void setDictionaries()
+{
+    English.CNB={"alk","meth","eth","prop","but","pent","hex","hept","oct","non",
+    "dec","undec","dodec","tridec","tetradec","pentadec","hexadec","heptadec","octadec","nonadec",
+    "icosan","henicos","docos","tricos","tetracos","pentacos","hexacos","heptacos","octacos","nonacos",
+    "triacont","hentriacont","hentriacont","tritriacont"};
+    English.FGTS={"ERROR","ane","ene","yne"};
+    English.SNP={"ERROR","mono","bi","tri","tetra","penta","hexa","hepta","octa","nona",
+    "deca","undeca","dodeca","trideca","tetradeca","pentadeca","hexadeca","heptadeca","octadeca","nonadeca",
+    "icosa","henicosa","docosa","tricosa"};
+    English.SS="yl";
+    English.CP="cyclo";
+    English.NC="Not Connected";
+
+    curr_dict=English;
+}
 int main()
 {
     system("cls");
 
-    cout<<"Use the Middle Mouse Button to start or continue chains.\nUse the Left Mouse Button to end chains and to move atoms,\nUse the right mouse button to cancel chains and remove atoms.\nPress Backspace to undo.\nPress Shift to toggle snapping on and off.\nPress R to reset.\nPress Escape to end the program.\nPress any key to continue."<<endl;
+    setDictionaries();
+
+    cout<<"Use the Middle Mouse Button to start or continue chains.\nUse the Left Mouse Button to end chains and to move atoms,"
+    <<"\nUse the right mouse button to cancel chains and remove atoms.\nPress Backspace to undo.\nPress Shift to toggle snapping on and off."
+    <<"\nPress R to reset.\nPress Escape to end the program.\nPress any key to continue."<<endl;
     getch();
 
     system("cls");
 
     string message;
     message=initializeGLFW();
-    cout<<message<<endl;
+    //cout<<message<<endl;
     if (message!="GLFW initialized successfully.") return -1;
 
     message=createWindow(window);
-    cout<<message<<endl;
+    //cout<<message<<endl;
     if (message!="Window created successfully.") return -1;
 
     message=setCallbacks(window);
-    cout<<message<<endl;
+    //cout<<message<<endl;
     if (message!="Callbacks set successfully.") return -1;
 
     //system("cls");

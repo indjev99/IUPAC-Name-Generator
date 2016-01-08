@@ -2,13 +2,13 @@
 <CodeBlocks_project_file>
 	<FileVersion major="1" minor="6" />
 	<Project>
-		<Option title="IUPAC_naming" />
+		<Option title="IUPAC_Name_Generator" />
 		<Option pch_mode="2" />
 		<Option default_target="Debug" />
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/IUPAC_naming" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Debug/IUPAC_Name_Generator" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -20,7 +20,7 @@
 				</Linker>
 			</Target>
 			<Target title="Release">
-				<Option output="bin/Release/IUPAC_naming" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Release/IUPAC_Name_Generator" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
