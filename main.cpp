@@ -1,3 +1,16 @@
+/*
+    Copyright (C) 2015 Emil Indzhev
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version. 
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 //IUPAC Name Generator
 #include<iostream>
 #include<algorithm>
@@ -687,7 +700,7 @@ string initializeGLFW()
 }
 string createWindow(GLFWwindow*& w)
 {
-    w=glfwCreateWindow(WINDOWS_WIDTH,WINDOWS_HEIGHT,"IUPAC naming",NULL,NULL);
+    w=glfwCreateWindow(WINDOWS_WIDTH,WINDOWS_HEIGHT,"IUPAC Name Generator",NULL,NULL);
     if (!w)
     {
         glfwTerminate();
@@ -1179,15 +1192,15 @@ void run(GLFWwindow* w)
         }
         if (pressed==-5)
         {
-            /*c_old=c;
+            c_old=c;
             last2=-1;
             last=-1;
             toMove=0;
             sx=0;
             sy=0;
             if (snappingEnabled) snap(sx,sy);
-            c=*(new compound(carbonSymbol,4,sx,sy));*/
-            BACKGROUND_COLOUR_R2=!BACKGROUND_COLOUR_R2;
+            c=*(new compound(carbonSymbol,4,sx,sy));
+            //BACKGROUND_COLOUR_R2=!BACKGROUND_COLOUR_R2;
         }
         last=c.findAtom(mxpos,mypos);
         if (snappingEnabled) snap(mxpos,mypos);
