@@ -1,16 +1,3 @@
-/*
-    Copyright (C) 2015 Emil Indzhev
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version. 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
 //IUPAC Name Generator
 #include<iostream>
 #include<algorithm>
@@ -42,17 +29,17 @@ bool snappingEnabled=1;
 
 struct dictionary
 {
-    vector<string> CNB; //carbon_number_bases
+    vector<string> CNP; //carbon_number_prefixes
     vector<string> SNP; //substituent_number_prefixes
     vector<string> FGTS; //functional_group_type_suffixes
     string SS; //substituent_suffix
     string CP; //cycle_prefix
     string NC; //not_connected
 
-    string getCNB(int CN)
+    string getCNP(int CN)
     {
-        if (CN>=CNB.size()) CN=0;
-        return CNB[CN];
+        if (CN>=CNP.size()) CN=0;
+        return CNP[CN];
     }
     string getSNP(int ST)
     {
@@ -68,7 +55,7 @@ bool cmpBySubName(pair<int, int> a, pair<int, int> b)
     return curr_dict.getSNP(a.second)<curr_dict.getSNP(b.second);
 }
 
-struct connection
+struct bond
 {
     vector<int> spots_taken;
     int to;
@@ -77,45 +64,56 @@ struct atom
 {
     string symbol;
     double x,y;
-    vector<connection> connections;
-    stack<int> free_connections;
+    vector<bond> bonds;
+    stack<int> free_bonds;
 
-    int connect(int connection)
+    int connect(int bond)
     {
-        if (!free_connections.empty())
+        if (!free_bonds.empty())
         {
-            int nc=isConnected(connection);
+            int nc=isConnected(bond);
             if (nc==-1)
             {
-                nc=free_connections.top();
+                nc=free_bonds.top();
             }
-            else if (symbol=="C" && connections[nc].spots_taken.size()==connections.size()-1) return -1;
-            connections[nc].to=connection;
-            connections[nc].spots_taken.push_back(free_connections.top());
-            free_connections.pop();
-        }
-        return 1;
-    }
-    int isConnected(int connection)
-    {
-        for (int i=0;i<connections.size();++i)
-        {
-            if (connections[i].to==connection) return i;
+            else if (symbol=="C" && bonds[nc].spots_taken.size()==bonds.size()-1) return -1;
+            bonds[nc].to=bond;
+            bonds[nc].spots_taken.push_back(free_bonds.top());
+            free_bonds.pop();
+            return 1;
         }
         return -1;
     }
-    void removeConnection(int connection)
+    bool canConnect(int bond)
     {
-        for (int i=0;i<connections.size();++i)
+        if (!free_bonds.empty())
         {
-            if (connections[i].to==connection)
+            int nc=isConnected(bond);
+            if (nc>=0 && symbol=="C" && bonds[nc].spots_taken.size()==bonds.size()-1) return 0;
+            return 1;
+        }
+        return 0;
+    }
+    int isConnected(int bond)
+    {
+        for (int i=0;i<bonds.size();++i)
+        {
+            if (bonds[i].to==bond) return i;
+        }
+        return -1;
+    }
+    void removeBond(int bond)
+    {
+        for (int i=0;i<bonds.size();++i)
+        {
+            if (bonds[i].to==bond)
             {
-                connections[i].to=-1;
-                for (int j=0;j<connections[i].spots_taken.size();++j)
+                bonds[i].to=-1;
+                for (int j=0;j<bonds[i].spots_taken.size();++j)
                 {
-                    free_connections.push(connections[i].spots_taken[j]);
+                    free_bonds.push(bonds[i].spots_taken[j]);
                 }
-                connections[i].spots_taken.resize(0);
+                bonds[i].spots_taken.resize(0);
             }
         }
     }
@@ -130,25 +128,25 @@ struct atom
         symbol=new_symbol;
         x=new_x;
         y=new_y;
-        connections.resize(new_valance);
+        bonds.resize(new_valance);
         for (int i=new_valance-1;i>=0;--i)
         {
-            connections[i].to=-1;
-            free_connections.push(i);
+            bonds[i].to=-1;
+            free_bonds.push(i);
         }
     }
-    atom(string new_symbol, int new_valance, double new_x, double new_y, int new_connection)
+    atom(string new_symbol, int new_valance, double new_x, double new_y, int new_bond)
     {
         symbol=new_symbol;
         x=new_x;
         y=new_y;
-        connections.resize(new_valance);
+        bonds.resize(new_valance);
         for (int i=new_valance-1;i>=0;--i)
         {
-            connections[i].to=-1;
-            free_connections.push(i);
+            bonds[i].to=-1;
+            free_bonds.push(i);
         }
-        connect(new_connection);
+        connect(new_bond);
     }
 };
 struct compound
@@ -177,25 +175,26 @@ struct compound
         atom a(new_symbol,new_valance,new_x,new_y);
         return addAtom(a);
     }
-    int addAtom(string new_symbol, int new_valance, double new_x, double new_y, int new_connection)
+    int addAtom(string new_symbol, int new_valance, double new_x, double new_y, int new_bond)
     {
         int ind=-1;
         if (new_valance<=0) return -1;
-        if (new_connection>=atoms.size() || atoms[new_connection].symbol=="") return -1;
-        atom a(new_symbol,new_valance,new_x,new_y,new_connection);
-        if (!atoms[new_connection].free_connections.empty())
+        if (new_bond>=atoms.size() || atoms[new_bond].symbol=="") return -1;
+        atom a(new_symbol,new_valance,new_x,new_y,new_bond);
+        if (!atoms[new_bond].free_bonds.empty())
         {
             ind=addAtom(a);
-            if (ind!=-1) atoms[new_connection].connect(ind);
+            if (ind!=-1) atoms[new_bond].connect(ind);
         }
         return ind;
     }
     int connectAtoms(int a1, int a2)
     {
-        if (a1<atoms.size() && a2<atoms.size() && a1!=a2 && atoms[a1].symbol!="" && atoms[a2].symbol!="" && !atoms[a1].free_connections.empty() && !atoms[a2].free_connections.empty())
+        if (a1<atoms.size() && a2<atoms.size() && a1!=a2 && atoms[a1].symbol!="" && atoms[a2].symbol!="" && atoms[a1].canConnect(a2) && atoms[a2].canConnect(a1))
         {
             atoms[a1].connect(a2);
-            return atoms[a2].connect(a1);
+            atoms[a2].connect(a1);
+            return 1;
         }
         return -1;
     }
@@ -205,11 +204,11 @@ struct compound
         if (a<atoms.size())
         {
             a1=atoms[a];
-            if (a1.symbol!="")// && a1.connections.size()-a1.free_connections.size()<=1)
+            if (a1.symbol!="")// && a1.bonds.size()-a1.free_bonds.size()<=1)
             {
-                for (int i=0;i<a1.connections.size();++i)
+                for (int i=0;i<a1.bonds.size();++i)
                 {
-                    if (a1.connections[i].to!=-1) atoms[a1.connections[i].to].removeConnection(a);
+                    if (a1.bonds[i].to!=-1) atoms[a1.bonds[i].to].removeBond(a);
                 }
                 atoms[a].symbol="";
                 free_positions.push(a);
@@ -247,7 +246,7 @@ struct compound
         if (minDistInd!=-1)
         {
             a=atoms[minDistInd];
-            if (x<a.x-0.05 || (x>a.x+0.05 && a.free_connections.empty()) || x>a.x+0.15 || y<a.y-0.08 || y>a.y+0.08) minDistInd=-1;
+            if (x<a.x-0.05 || (x>a.x+0.05 && a.free_bonds.empty()) || x>a.x+0.15 || y<a.y-0.08 || y>a.y+0.08) minDistInd=-1;
         }
         return minDistInd;
     }
@@ -279,9 +278,9 @@ struct compound
             st.pop();
             a=atoms[s];
             vc=0;
-            for (int i=0;i<a.connections.size();++i)
+            for (int i=0;i<a.bonds.size();++i)
             {
-                s=a.connections[i].to;
+                s=a.bonds[i].to;
                 if (s!=-1 && atoms[s].symbol!="")
                 {
                     if (!vis[s])
@@ -307,9 +306,9 @@ struct compound
         for (int i=0;i<atoms.size();++i)
         {
             a=atoms[i];
-            if (a.symbol=="C") for (int j=0;j<a.connections.size();++j)
+            if (a.symbol=="C") for (int j=0;j<a.bonds.size();++j)
             {
-                if (a.connections[j].to!=-1 && atoms[a.connections[j].to].symbol=="C" && a.connections[j].spots_taken.size()>maxcon) maxcon=a.connections[j].spots_taken.size();
+                if (a.bonds[j].to!=-1 && atoms[a.bonds[j].to].symbol=="C" && a.bonds[j].spots_taken.size()>maxcon) maxcon=a.bonds[j].spots_taken.size();
             }
         }
         return maxcon;
@@ -318,7 +317,7 @@ struct compound
     {
         string name="";
         if (CS==2) name="cyclo";
-        name+=curr_dict.getCNB(atoms.size()-free_positions.size());
+        name+=curr_dict.getCNP(atoms.size()-free_positions.size());
         name+=curr_dict.FGTS[findMaxCon()];
         return name;
     }
@@ -349,9 +348,9 @@ struct compound
             if (curr.second==maxDist) maxDistAtoms.push_back(curr.first);
             a=atoms[curr.first];
             ++curr.second;
-            for (int i=0;i<a.connections.size();++i)
+            for (int i=0;i<a.bonds.size();++i)
             {
-                s=a.connections[i].to;
+                s=a.bonds[i].to;
                 if (s!=-1 && atoms[s].symbol!="" && !vis[s])
                 {
                     curr.first=s;
@@ -379,9 +378,9 @@ struct compound
             s=st.top();
             st.pop();
             a=atoms[s];
-            for (int i=0;i<a.connections.size();++i)
+            for (int i=0;i<a.bonds.size();++i)
             {
-                s2=a.connections[i].to;
+                s2=a.bonds[i].to;
                 if (s2!=-1 && atoms[s2].symbol!="" && prev[s2]==-2)
                 {
                     prev[s2]=s;
@@ -409,9 +408,9 @@ struct compound
             st.pop();
             ++subSize;
             a=atoms[s];
-            for (int i=0;i<a.connections.size();++i)
+            for (int i=0;i<a.bonds.size();++i)
             {
-                s=a.connections[i].to;
+                s=a.bonds[i].to;
                 if (s!=-1 && atoms[s].symbol!="" && !vis[s])
                 {
                     vis[s]=1;
@@ -429,12 +428,12 @@ struct compound
         for (int i=1;i<parent_chain.size()-1;++i)
         {
             a=atoms[parent_chain[i]];
-            for (int j=0;j<a.connections.size();++j)
+            for (int j=0;j<a.bonds.size();++j)
             {
-                if (a.connections[j].to!=-1 && a.connections[j].to!=parent_chain[i-1] && a.connections[j].to!=parent_chain[i+1])
+                if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[i-1] && a.bonds[j].to!=parent_chain[i+1])
                 {
                     sub.first=i+1;
-                    sub.second=findSubType(parent_chain,a.connections[j].to);
+                    sub.second=findSubType(parent_chain,a.bonds[j].to);
                     subs.push_back(sub);
                 }
             }
@@ -468,7 +467,7 @@ struct compound
         }
         prefix+='-';
         if (pos.size()>1) prefix+=curr_dict.getSNP(pos.size());
-        prefix+=curr_dict.getCNB(t);
+        prefix+=curr_dict.getCNP(t);
         prefix+=curr_dict.SS;
         return prefix;
     }
@@ -592,9 +591,9 @@ struct compound
             for (int j=1;j<parent_chain.size()-1;++j)
             {
                 a=atoms[parent_chain[j]];
-                for (int o=0;o<a.connections.size();++o)
+                for (int o=0;o<a.bonds.size();++o)
                 {
-                    if (a.connections[o].to!=-1 && a.connections[o].to!=parent_chain[j-1] && a.connections[o].to!=parent_chain[j+1]) ++sideChains;
+                    if (a.bonds[o].to!=-1 && a.bonds[o].to!=parent_chain[j-1] && a.bonds[o].to!=parent_chain[j+1]) ++sideChains;
                 }
             }
             if (sideChains>maxSideChains)
@@ -629,14 +628,14 @@ struct compound
         parent_chain=directParentChain(parent_chain);
         subs=findSubstituents(parent_chain);
         name=findSPs(subs);
-        name+=curr_dict.getCNB(parent_chain.size());
+        name+=curr_dict.getCNP(parent_chain.size());
         name+=curr_dict.FGTS[findMaxCon()];
         return name;
     }
     string getName()
     {
         string name;
-        int CS=isConnected(); //connection_status
+        int CS=isConnected(); //bond_status
         if (!CS) return curr_dict.NC;
         if (CS==2) name=getNameStupid(CS);
         else name=getName1();
@@ -700,7 +699,7 @@ string initializeGLFW()
 }
 string createWindow(GLFWwindow*& w)
 {
-    w=glfwCreateWindow(WINDOWS_WIDTH,WINDOWS_HEIGHT,"IUPAC Name Generator",NULL,NULL);
+    w=glfwCreateWindow(WINDOWS_WIDTH,WINDOWS_HEIGHT,"IUPAC naming",NULL,NULL);
     if (!w)
     {
         glfwTerminate();
@@ -1049,9 +1048,9 @@ void drawIndex(int index, double x, double y)
 }
 void drawAtom(atom& a)
 {
-    //cout<<a.x<<" "<<a.y<<" "<<a.symbol<<Hsymbol<<a.free_connections.size()<<'\n';
+    //cout<<a.x<<" "<<a.y<<" "<<a.symbol<<Hsymbol<<a.free_bonds.size()<<'\n';
     double nextpos;
-    if (a.free_connections.empty())
+    if (a.free_bonds.empty())
     {
         drawSymbol(a.symbol,a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,1);
     }
@@ -1070,10 +1069,10 @@ void drawAtom(atom& a)
 
         nextpos=drawSymbol(a.symbol,a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,1);
         nextpos=drawSymbol(Hsymbol,nextpos,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0);
-        drawIndex(a.free_connections.size(),nextpos-0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        drawIndex(a.free_bonds.size(),nextpos-0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
     }
 }
-void drawConnection(double x1, double y1, double x2, double y2, int num)
+void drawBond(double x1, double y1, double x2, double y2, int num)
 {
     glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
     glLineWidth(4.0);
@@ -1106,12 +1105,12 @@ void drawCompound(GLFWwindow* w, compound& c)
     {
         a=c.atoms[i];
         if (a.symbol=="") continue;
-        for (int i=0;i<a.connections.size();++i)
+        for (int i=0;i<a.bonds.size();++i)
         {
-            if (a.connections[i].to!=-1)
+            if (a.bonds[i].to!=-1)
             {
-                a2=c.atoms[a.connections[i].to];
-                drawConnection(a.x,a.y,a2.x,a2.y,a.connections[i].spots_taken.size());
+                a2=c.atoms[a.bonds[i].to];
+                drawBond(a.x,a.y,a2.x,a2.y,a.bonds[i].spots_taken.size());
             }
         }
     }
@@ -1168,11 +1167,12 @@ void snap(double& x, double& y)
 void run(GLFWwindow* w)
 {
     string carbonSymbol="C";
+    int carbonValance=4;
     double sx,sy;
     sx=0;
     sy=0;
     if (snappingEnabled) snap(sx,sy);
-    compound c(carbonSymbol,4,sx,sy);
+    compound c(carbonSymbol,carbonValance,sx,sy);
     compound c_old=c;
     int last2=-1;
     int last=-1;
@@ -1225,7 +1225,7 @@ void run(GLFWwindow* w)
                     result=c.connectAtoms(last2,last);
                     if (result!=-1)
                     {
-                        if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[last].free_connections.empty()) last2=-1;
+                        if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[last].free_bonds.empty()) last2=-1;
                         else last2=last;
                     }
                     last=-1;
@@ -1233,10 +1233,10 @@ void run(GLFWwindow* w)
                 }
                 else
                 {
-                    result=c.addAtom(carbonSymbol,4,mxpos,mypos,last2);
+                    result=c.addAtom(carbonSymbol,carbonValance,mxpos,mypos,last2);
                     if (result!=-1)
                     {
-                        if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[result].free_connections.empty()) last2=-1;
+                        if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[result].free_bonds.empty()) last2=-1;
                         else last2=result;
                     }
                     last=-1;
@@ -1247,10 +1247,10 @@ void run(GLFWwindow* w)
                 if (last==-1)
                 {
                     c_old=c;
-                    result=c.addAtom(carbonSymbol,4,mxpos,mypos);
+                    result=c.addAtom(carbonSymbol,carbonValance,mxpos,mypos);
                     if (result!=-1)
                     {
-                        if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[result].free_connections.empty()) last2=-1;
+                        if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[result].free_bonds.empty()) last2=-1;
                         else last2=result;
                     }
                 }
@@ -1258,7 +1258,7 @@ void run(GLFWwindow* w)
                 {
                     if (pressed==GLFW_MOUSE_BUTTON_LEFT) toMove=1;
                     else toMove=0;
-                    if (!c.atoms[last].free_connections.empty())
+                    if (!c.atoms[last].free_bonds.empty())
                     {
                         last2=last;
                     }
@@ -1279,7 +1279,7 @@ void run(GLFWwindow* w)
 }
 void setDictionaries()
 {
-    English.CNB={"alk","meth","eth","prop","but","pent","hex","hept","oct","non",
+    English.CNP={"alk","meth","eth","prop","but","pent","hex","hept","oct","non",
     "dec","undec","dodec","tridec","tetradec","pentadec","hexadec","heptadec","octadec","nonadec",
     "icosan","henicos","docos","tricos","tetracos","pentacos","hexacos","heptacos","octacos","nonacos",
     "triacont","hentriacont","hentriacont","tritriacont"};
