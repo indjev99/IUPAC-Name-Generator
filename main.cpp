@@ -699,7 +699,7 @@ string initializeGLFW()
 }
 string createWindow(GLFWwindow*& w)
 {
-    w=glfwCreateWindow(WINDOWS_WIDTH,WINDOWS_HEIGHT,"IUPAC naming",NULL,NULL);
+    w=glfwCreateWindow(WINDOWS_WIDTH,WINDOWS_HEIGHT,"IUPAC Name Generator",NULL,NULL);
     if (!w)
     {
         glfwTerminate();
@@ -1284,7 +1284,7 @@ void setDictionaries()
     "icosan","henicos","docos","tricos","tetracos","pentacos","hexacos","heptacos","octacos","nonacos",
     "triacont","hentriacont","hentriacont","tritriacont"};
     English.FGTS={"ERROR","ane","ene","yne"};
-    English.SNP={"ERROR","mono","bi","tri","tetra","penta","hexa","hepta","octa","nona",
+    English.SNP={"ERROR","mono","di","tri","tetra","penta","hexa","hepta","octa","nona",
     "deca","undeca","dodeca","trideca","tetradeca","pentadeca","hexadeca","heptadeca","octadeca","nonadeca",
     "icosa","henicosa","docosa","tricosa"};
     English.SS="yl";
