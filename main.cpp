@@ -48,7 +48,7 @@ struct dictionary
     }
 };
 
-dictionary English,curr_dict;
+dictionary Bulgarian,English,curr_dict;
 
 bool cmpBySubName(pair<int, int> a, pair<int, int> b)
 {
@@ -1291,10 +1291,23 @@ void setDictionaries()
     English.CP="cyclo";
     English.NC="Not Connected";
 
+    Bulgarian.CNP={"алк","мет","ет","проп","бут","пент","хекс","хепт","окт","нон",
+    "дек","undec","dodec","tridec","tetradec","pentadec","hexadec","heptadec","octadec","nonadec",
+    "icosan","henicos","docos","tricos","tetracos","pentacos","hexacos","heptacos","octacos","nonacos",
+    "triacont","hentriacont","hentriacont","tritriacont"};
+    Bulgarian.FGTS={"ГРЕШКА","ан","ен","ин"};
+    Bulgarian.SNP={"ГРЕШКА","моно","ди","три","тетра","пента","хекса","хепта","окта","нона",
+    "дека","undeca","dodeca","trideca","tetradeca","pentadeca","hexadeca","heptadeca","octadeca","nonadeca",
+    "icosa","henicosa","docosa","tricosa"};
+    Bulgarian.SS="ил";
+    Bulgarian.CP="цикло";
+    Bulgarian.NC="Не са свързани";
+
     curr_dict=English;
 }
 int main()
 {
+    system("chcp 1251");
     system("cls");
 
     setDictionaries();
