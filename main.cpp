@@ -342,6 +342,7 @@ struct compound
         {
             curr=st.top();
             st.pop();
+            cerr<<"Curr Atom: "<<curr.first<<" "<<curr.second<<endl;
             if (curr.second>maxDist)
             {
                 maxDist=curr.second;
@@ -353,11 +354,20 @@ struct compound
             for (int i=0;i<a.bonds.size();++i)
             {
                 s=a.bonds[i].to;
-                if (s!=-1 && atoms[s].symbol!="" && !vis[s])
+                if (s!=-1 && atoms[s].symbol=="C" && !vis[s])
                 {
                     curr.first=s;
                     vis[s]=1;
-                    st.push(curr);
+                    if (a.bonds[i].spots_taken.size()>1)
+                    {
+                        curr.second+=atoms.size();
+                        st.push(curr);
+                        curr.second-=atoms.size();
+                    }
+                    else
+                    {
+                        st.push(curr);
+                    }
                 }
             }
         }
@@ -413,7 +423,7 @@ struct compound
             for (int i=0;i<a.bonds.size();++i)
             {
                 s=a.bonds[i].to;
-                if (s!=-1 && atoms[s].symbol!="" && !vis[s])
+                if (s!=-1 && atoms[s].symbol=="C" && !vis[s])
                 {
                     vis[s]=1;
                     st.push(s);
@@ -537,15 +547,17 @@ struct compound
         int starting_atom;
         for (int i=0;i<atoms.size();++i)
         {
-            if (atoms[i].symbol!="")
+            if (atoms[i].symbol=="C")
             {
                 starting_atom=i;
                 break;
             }
         }
+        cerr<<"SA: "<<starting_atom<<endl;
         candidates=findFarthest(starting_atom);
         for (int i=0;i<candidates.first.size();++i)
         {
+            cerr<<"Cands1: "<<candidates.first[i]<<" "<<candidates.second<<endl;
             candidates2=findFarthest(candidates.first[i]);
             if (candidates2.second>maxDist)
             {
