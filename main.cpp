@@ -12,7 +12,7 @@ const int ORIGINAL_WINDOWS_WIDTH=1100;
 const int ORIGINAL_WINDOWS_HEIGHT=1050;
 int WINDOWS_WIDTH=ORIGINAL_WINDOWS_WIDTH;
 int WINDOWS_HEIGHT=ORIGINAL_WINDOWS_HEIGHT;
-double DEG2RAD=3.14159/180.0;
+const double DEG2RAD=3.14159/180.0;
 double TEXT_COLOUR_R=0;
 double TEXT_COLOUR_G=0;
 double TEXT_COLOUR_B=0;
@@ -49,10 +49,12 @@ struct dictionary
 };
 
 dictionary Bulgarian,English,curr_dict;
+vector<dictionary> dictionaries;
+int curr_dict_N;
 
 bool cmpBySubName(pair<int, int> a, pair<int, int> b)
 {
-    return curr_dict.getSNP(a.second)<curr_dict.getSNP(b.second);
+    return curr_dict.getCNP(a.second)<curr_dict.getCNP(b.second);
 }
 
 struct bond
@@ -664,6 +666,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key==GLFW_KEY_BACKSPACE && action==GLFW_PRESS) pressed=-3;
     if (key==GLFW_KEY_RIGHT_SHIFT || key==GLFW_KEY_LEFT_SHIFT && action==GLFW_PRESS) snappingEnabled=!snappingEnabled;
     if (key==GLFW_KEY_R && action==GLFW_PRESS) pressed=-5;
+    if (key==GLFW_KEY_L && action==GLFW_PRESS) pressed=-6;
 }
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
@@ -1202,6 +1205,12 @@ void run(GLFWwindow* w)
             c=*(new compound(carbonSymbol,4,sx,sy));
             //BACKGROUND_COLOUR_R2=!BACKGROUND_COLOUR_R2;
         }
+        if (pressed==-6)
+        {
+            ++curr_dict_N;
+            curr_dict_N%=dictionaries.size();
+            curr_dict=dictionaries[curr_dict_N];
+        }
         last=c.findAtom(mxpos,mypos);
         if (snappingEnabled) snap(mxpos,mypos);
         if (last==-1 && c.findAtom(mxpos,mypos)!=-1) continue;
@@ -1290,6 +1299,7 @@ void setDictionaries()
     English.SS="yl";
     English.CP="cyclo";
     English.NC="Not Connected";
+    dictionaries.push_back(English);
 
     Bulgarian.CNP={"алк","мет","ет","проп","бут","пент","хекс","хепт","окт","нон",
     "дек","undec","dodec","tridec","tetradec","pentadec","hexadec","heptadec","octadec","nonadec",
@@ -1302,8 +1312,11 @@ void setDictionaries()
     Bulgarian.SS="ил";
     Bulgarian.CP="цикло";
     Bulgarian.NC="Не са свързани";
+    dictionaries.push_back(Bulgarian);
 
-    curr_dict=English;
+    curr_dict_N=0;
+
+    curr_dict=dictionaries[curr_dict_N];
 }
 int main()
 {
@@ -1314,7 +1327,7 @@ int main()
 
     cout<<"Use the Middle Mouse Button to start or continue chains.\nUse the Left Mouse Button to end chains and to move atoms,"
     <<"\nUse the Right mouse button to cancel chains and remove atoms.\nPress Backspace to undo.\nPress Shift to toggle snapping on and off."
-    <<"\nPress R to reset.\nPress Escape to end the program.\nPress any key to continue."<<endl;
+    <<"\nPress R to reset.\nPress Escape to end the program.\nPress L to change the language.\nPress any key to continue."<<endl;
     getch();
 
     system("cls");
