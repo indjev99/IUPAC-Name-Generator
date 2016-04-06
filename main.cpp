@@ -735,6 +735,7 @@ struct compound
             suffix+=curr_dict.FGTS[2];
             if (!triple_bonds.empty())
             {
+                suffix.resize(suffix.size()-1);
                 if (parent_chain.size()>3)
                 {
                     suffix+='-';
