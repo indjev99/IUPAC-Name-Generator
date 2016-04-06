@@ -32,7 +32,7 @@ struct dictionary
     vector<string> CNP; //carbon_number_prefixes
     vector<string> SNP; //substituent_number_prefixes
     vector<string> FGTS; //functional_group_type_suffixes
-    string SS; //substituent_suffix
+    vector<string> SS; //substituent_suffix
     string CP; //cycle_prefix
     string NC; //not_connected
 
@@ -262,6 +262,55 @@ struct compound
         addAtom(new_symbol,new_valance,new_x,new_y);
     }
 
+
+    string addSuffix(string name, string suffix)
+    {
+        bool first_letter_vowel=0;
+        for (int i=0;i<suffix.size();++i)
+        {
+            if ((suffix[i]>='a' && suffix[i]<='z') || suffix[i]>='а' && suffix[i]<='я')
+            {
+                if (suffix[i]=='a' || suffix[i]=='e' || suffix[i]=='i' || suffix[i]=='o'
+                    || suffix[i]=='u' || suffix[i]=='y' || suffix[i]=='а' || suffix[i]=='ъ'
+                    || suffix[i]=='о' || suffix[i]=='у' || suffix[i]=='е' || suffix[i]=='и'
+                    || suffix[i]=='й' || suffix[i]=='ю' || suffix[i]=='я' || suffix[i]=='ь')
+                {
+                    first_letter_vowel=1;
+                }
+                break;
+            }
+        }
+        int ns=name.size()-1;
+        if (first_letter_vowel)
+        {
+            if (name[ns]=='a' || name[ns]=='e' || name[ns]=='i' || name[ns]=='o'
+                || name[ns]=='u' || name[ns]=='y' || name[ns]=='а' || name[ns]=='ъ'
+                || name[ns]=='о' || name[ns]=='у' || name[ns]=='е' || name[ns]=='и'
+                || name[ns]=='й' || name[ns]=='ю' || name[ns]=='я' || name[ns]=='ь')
+            {
+                name.resize(ns);
+            }
+        }
+        name+=suffix;
+        return name;
+    }
+    string intToString(int num)
+    {
+        string ans2="",ans;
+        do
+        {
+            ans2+=num%10+'0';
+            num/=10;
+        }
+        while (num!=0);
+        ans=ans2;
+        for (int i=0;i<ans.size();++i)
+        {
+            ans[i]=ans2[ans2.size()-1-i];
+        }
+        return ans;
+    }
+
     int isConnected()
     {
         int cycle=0,vc;
@@ -319,7 +368,7 @@ struct compound
         }
         return maxcon;
     }
-    pair<vector<int>, int> findFarthest(int s)
+    pair<vector<int>, int> findFarthest(int s, int out)
     {
         vector<int> maxDistAtoms;
         pair<vector<int>, int> ans;
@@ -328,6 +377,7 @@ struct compound
         stack<pair<int, int> > st;
         vector<bool> vis;
         pair<int, int> curr;
+        int cons;
         vis.resize(atoms.size());
         for (int i=0;i<vis.size();++i) vis[i]=0;
         curr.first=s;
@@ -338,26 +388,38 @@ struct compound
         {
             curr=st.top();
             st.pop();
+            a=atoms[curr.first];
+            curr.second+=atoms.size();
+            cons=0;
+            for (int i=0;i<a.bonds.size();++i)
+            {
+                s=a.bonds[i].to;
+                if (s!=-1 && atoms[s].symbol=="C")
+                {
+                    ++cons;
+                    if (s==out) curr.second+=atoms.size()*atoms.size()*atoms.size();
+                }
+            }
+            cons=max(0,cons-2);
+            curr.second+=cons;
             if (curr.second>maxDist)
             {
                 maxDist=curr.second;
                 maxDistAtoms.resize(0);
             }
             if (curr.second==maxDist) maxDistAtoms.push_back(curr.first);
-            a=atoms[curr.first];
-            ++curr.second;
             for (int i=0;i<a.bonds.size();++i)
             {
                 s=a.bonds[i].to;
-                if (s!=-1 && atoms[s].symbol=="C" && !vis[s])
+                if (s!=-1 && atoms[s].symbol=="C" && !vis[s] && s!=out)
                 {
                     curr.first=s;
                     vis[s]=1;
                     if (a.bonds[i].spots_taken.size()>1)
                     {
-                        curr.second+=atoms.size();
+                        curr.second+=atoms.size()*atoms.size();
                         st.push(curr);
-                        curr.second-=atoms.size();
+                        curr.second-=atoms.size()*atoms.size();
                     }
                     else
                     {
@@ -370,7 +432,7 @@ struct compound
         ans.second=maxDist;
         return ans;
     }
-    vector<int> findPathFrom(int s)
+    vector<int> findPathFrom(int s, int out)
     {
         atom a;
         int s2;
@@ -388,7 +450,7 @@ struct compound
             for (int i=0;i<a.bonds.size();++i)
             {
                 s2=a.bonds[i].to;
-                if (s2!=-1 && atoms[s2].symbol=="C" && prev[s2]==-2)
+                if (s2!=-1 && atoms[s2].symbol=="C" && prev[s2]==-2 && s2!=out)
                 {
                     prev[s2]=s;
                     st.push(s2);
@@ -447,7 +509,7 @@ struct compound
         }
         return comp_bonds;
     }
-    vector<pair<int, int> > findSubstituents(vector<int> parent_chain)
+    vector<pair<int, int> > findSubstituents(vector<int> parent_chain, int out)
     {
         atom a;
         vector<pair<int, int> > subs;
@@ -457,7 +519,7 @@ struct compound
             a=atoms[parent_chain[i]];
             for (int j=0;j<a.bonds.size();++j)
             {
-                if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[i-1] && a.bonds[j].to!=parent_chain[i+1])
+                if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[i-1] && a.bonds[j].to!=parent_chain[i+1] && a.bonds[j].to!=out)
                 {
                     sub.first=i+1;
                     sub.second=findSubType(parent_chain,a.bonds[j].to);
@@ -466,53 +528,6 @@ struct compound
             }
         }
         return subs;
-    }
-    string addSuffix(string name, string suffix)
-    {
-        bool first_letter_vowel=0;
-        for (int i=0;i<suffix.size();++i)
-        {
-            if ((suffix[i]>='a' && suffix[i]<='z') || suffix[i]>='а' && suffix[i]<='я')
-            {
-                if (suffix[i]=='a' || suffix[i]=='e' || suffix[i]=='i' || suffix[i]=='o'
-                    || suffix[i]=='u' || suffix[i]=='y' || suffix[i]=='а' || suffix[i]=='ъ'
-                    || suffix[i]=='о' || suffix[i]=='у' || suffix[i]=='е' || suffix[i]=='и'
-                    || suffix[i]=='й' || suffix[i]=='ю' || suffix[i]=='я' || suffix[i]=='ь')
-                {
-                    first_letter_vowel=1;
-                }
-                break;
-            }
-        }
-        int ns=name.size()-1;
-        if (first_letter_vowel)
-        {
-            if (name[ns]=='a' || name[ns]=='e' || name[ns]=='i' || name[ns]=='o'
-                || name[ns]=='u' || name[ns]=='y' || name[ns]=='а' || name[ns]=='ъ'
-                || name[ns]=='о' || name[ns]=='у' || name[ns]=='е' || name[ns]=='и'
-                || name[ns]=='й' || name[ns]=='ю' || name[ns]=='я' || name[ns]=='ь')
-            {
-                name.resize(ns);
-            }
-        }
-        name+=suffix;
-        return name;
-    }
-    string intToString(int num)
-    {
-        string ans2="",ans;
-        do
-        {
-            ans2+=num%10+'0';
-            num/=10;
-        }
-        while (num!=0);
-        ans=ans2;
-        for (int i=0;i<ans.size();++i)
-        {
-            ans[i]=ans2[ans2.size()-1-i];
-        }
-        return ans;
     }
     string findSP(vector<int> pos, int t) //find substituents_prefix
     {
@@ -526,7 +541,7 @@ struct compound
         prefix+='-';
         if (pos.size()>1) prefix+=curr_dict.getSNP(pos.size());
         prefix+=curr_dict.getCNP(t);
-        prefix=addSuffix(prefix,curr_dict.SS);
+        prefix=addSuffix(prefix,curr_dict.SS[1]);
         return prefix;
     }
     string findSPs(vector<pair<int, int> > subs)//find substituents_prefixes
@@ -550,7 +565,7 @@ struct compound
         prefixes+=findSP(currPos,curr);
         return prefixes;
     }
-    vector<int> directParentChain(vector<int> parent_chain)
+    vector<int> directParentChain(vector<int> parent_chain, int out)
     {
         atom a;
         vector<int> parent_chain2;
@@ -597,8 +612,8 @@ struct compound
                 return parent_chain2;
             }
         }
-        subs1=findSubstituents(parent_chain);
-        subs2=findSubstituents(parent_chain2);
+        subs1=findSubstituents(parent_chain,out);
+        subs2=findSubstituents(parent_chain2,out);
         for (int i=0;i<subs1.size();++i)
         {
             if (subs1[i].first<subs2[i].first)
@@ -613,7 +628,7 @@ struct compound
         }
         return parent_chain;
     }
-    vector<int> findParentChain()
+    vector<int> findParentChain(int in, int out)
     {
         atom a;
         pair<vector<int>, int> candidates,candidates2;
@@ -627,18 +642,25 @@ struct compound
         int curr;
         int maxDist=-1;
         int starting_atom;
-        for (int i=0;i<atoms.size();++i)
+        if (in==-1)
         {
-            if (atoms[i].symbol=="C")
+            for (int i=0;i<atoms.size();++i)
             {
-                starting_atom=i;
-                break;
+                if (atoms[i].symbol=="C")
+                {
+                    starting_atom=i;
+                    break;
+                }
             }
         }
-        candidates=findFarthest(starting_atom);
+        else
+        {
+            starting_atom=in;
+        }
+        candidates=findFarthest(starting_atom,out);
         for (int i=0;i<candidates.first.size();++i)
         {
-            candidates2=findFarthest(candidates.first[i]);
+            candidates2=findFarthest(candidates.first[i],out);
             if (candidates2.second>maxDist)
             {
                 maxDist=candidates2.second;
@@ -663,7 +685,7 @@ struct compound
         {
             if (i==0 || finalCandidates[i].first!=finalCandidates[i-1].first)
             {
-                prev=findPathFrom(finalCandidates[i].first);
+                prev=findPathFrom(finalCandidates[i].first,out);
             }
             if (i==0 || finalCandidates[i].first!=finalCandidates[i-1].first || finalCandidates[i].second!=finalCandidates[i-1].second)
             {
@@ -677,7 +699,7 @@ struct compound
                 candidateParrentChains.push_back(parent_chain);
             }
         }
-        int sideChains;
+        /*int sideChains;
         for (int i=0;i<candidateParrentChains.size();++i)
         {
             sideChains=0;
@@ -687,7 +709,7 @@ struct compound
                 a=atoms[parent_chain[j]];
                 for (int o=0;o<a.bonds.size();++o)
                 {
-                    if (a.bonds[o].to!=-1 && a.bonds[o].to!=parent_chain[j-1] && a.bonds[o].to!=parent_chain[j+1]) ++sideChains;
+                    if (a.bonds[o].to!=-1 && a.bonds[o].to!=parent_chain[j-1] && a.bonds[o].to!=parent_chain[j+1] && atoms[a.bonds[o].to].symbol=="C") ++sideChains;
                 }
             }
             if (sideChains>maxSideChains)
@@ -697,9 +719,9 @@ struct compound
             }
             if (sideChains==maxSideChains)
             {
-                candidateParrentChains2.push_back(parent_chain);
+                candidateParrentChains2.push_back(directParentChain(parent_chain));
             }
-        }
+        }*/
         /*cout<<"Candidate parent chains: "<<candidateParrentChains2.size()<<endl;
         for (int i=0;i<candidateParrentChains2.size();++i)
         {
@@ -710,7 +732,7 @@ struct compound
             }
             cout<<endl;
         }*/
-        parent_chain=candidateParrentChains2[0];
+        parent_chain=candidateParrentChains[0];
         return parent_chain;
     }
     string getNameStupid(int CS)
@@ -721,18 +743,19 @@ struct compound
         name+=curr_dict.FGTS[findMaxCon()];
         return name;
     }
-    string getName1()
+    string getName1(int in, int out)
     {
         string name="";
-        string suffix="";
+        vector<string> suffixes;
+        string suffix;
         vector<int> parent_chain;
         vector<pair<int, int> > subs;
         vector<pair<int, int> > complex_bonds;
         vector<int> double_bonds;
         vector<int> triple_bonds;
-        parent_chain=findParentChain();
-        parent_chain=directParentChain(parent_chain);
-        subs=findSubstituents(parent_chain);
+        parent_chain=findParentChain(in,out);
+        parent_chain=directParentChain(parent_chain,out);
+        subs=findSubstituents(parent_chain,out);
         name=findSPs(subs);
         complex_bonds=findComplexBonds(parent_chain);
         for (int i=0;i<complex_bonds.size();++i)
@@ -742,56 +765,48 @@ struct compound
         }
         if (!double_bonds.empty())
         {
+            suffix="";
             if (parent_chain.size()>3)
             {
-                if (!name.empty()) name+='-';
+                suffix+='-';
                 for(int i=0;i<double_bonds.size();++i)
                 {
-                    if (i) name+=',';
-                    name+=intToString(double_bonds[i]);
+                    if (i) suffix+=',';
+                    suffix+=intToString(double_bonds[i]);
                 }
-                name+='-';
+                suffix+='-';
             }
             if (double_bonds.size()>1) suffix+=curr_dict.getSNP(double_bonds.size());
             suffix+=curr_dict.FGTS[2];
-            if (!triple_bonds.empty())
-            {
-                suffix.resize(suffix.size()-1);
-                if (parent_chain.size()>3)
-                {
-                    suffix+='-';
-                    for(int i=0;i<triple_bonds.size();++i)
-                    {
-                        if (i) suffix+=',';
-                        suffix+=intToString(triple_bonds[i]);
-                    }
-                    suffix+='-';
-                }
-                if (triple_bonds.size()>1) suffix+=curr_dict.getSNP(triple_bonds.size());
-                suffix+=curr_dict.FGTS[3];
-            }
+            suffixes.push_back(suffix);
         }
-        else if (!triple_bonds.empty())
+        if (!triple_bonds.empty())
         {
+            suffix="";
             if (parent_chain.size()>3)
             {
-                if (!name.empty()) name+='-';
+                suffix+='-';
                 for(int i=0;i<triple_bonds.size();++i)
                 {
-                    if (i) name+=',';
-                    name+=intToString(triple_bonds[i]);
+                    if (i) suffix+=',';
+                    suffix+=intToString(triple_bonds[i]);
                 }
-                name+='-';
+                suffix+='-';
             }
             if (triple_bonds.size()>1) suffix+=curr_dict.getSNP(triple_bonds.size());
             suffix+=curr_dict.FGTS[3];
+            suffixes.push_back(suffix);
         }
-        else
+        if (complex_bonds.empty())
         {
-            suffix+=curr_dict.FGTS[1];
+            suffix=curr_dict.FGTS[1];
+            suffixes.push_back(suffix);
         }
         name+=curr_dict.getCNP(parent_chain.size());
-        name=addSuffix(name,suffix);
+        for (int i=0;i<suffixes.size();++i)
+        {
+            name=addSuffix(name,suffixes[i]);
+        }
         return name;
     }
     string getName()
@@ -800,7 +815,7 @@ struct compound
         int CS=isConnected(); //bond_status
         if (!CS) return curr_dict.NC;
         if (CS==2) name=getNameStupid(CS);
-        else name=getName1();
+        else name=getName1(-1,-1);
 
         for (int i=0;i<name.size();++i)
         {
@@ -1459,7 +1474,7 @@ void setDictionaries()
     "deca","undeca","dodeca","trideca","tetradeca","pentadeca","hexadeca","heptadeca","octadeca","nonadeca",
     "icosa","henicosa","docosa","tricosa","tetracosa","pentacosa","hexacosa","heptacosa","octacosa","nonacosa",
     "triaconta","hentriaconta","hentriaconta","tritriaconta"};
-    English.SS="yl";
+    English.SS={"ERROR","yl"};
     English.CP="cyclo";
     English.NC="Not Connected";
     dictionaries.push_back(English);
@@ -1468,7 +1483,7 @@ void setDictionaries()
     Bulgarian.FGTS={"ГРЕШКА","ан","ен","ин"};
     Bulgarian.SNP={"ГРЕШКА","моно","ди","три","тетра","пента","хекса","хепта","окта","нона",
     "дека","ундека","додека","тридека","тетрадека","пентадека","хексадека","хептадека","октадека","нонадека"};
-    Bulgarian.SS="ил";
+    Bulgarian.SS={"ГРЕШКА","ил"};
     Bulgarian.CP="цикло";
     Bulgarian.NC="Не са свързани";
     dictionaries.push_back(Bulgarian);
