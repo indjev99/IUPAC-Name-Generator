@@ -558,6 +558,8 @@ struct compound
         vector<pair<int, int> > subs2;
         vector<pair<int, int> > complex_bonds1;
         vector<pair<int, int> > complex_bonds2;
+        vector<int> double_bonds1;
+        vector<int> double_bonds2;
         parent_chain2.resize(parent_chain.size());
         for (int i=0;i<parent_chain.size();++i)
         {
@@ -572,6 +574,25 @@ struct compound
                 return parent_chain;
             }
             if (complex_bonds1[i].first>complex_bonds2[i].first)
+            {
+                return parent_chain2;
+            }
+        }
+        for (int i=0;i<complex_bonds1.size();++i)
+        {
+            if (complex_bonds1[i].second==2) double_bonds1.push_back(complex_bonds1[i].first);
+        }
+        for (int i=0;i<complex_bonds2.size();++i)
+        {
+            if (complex_bonds2[i].second==2) double_bonds2.push_back(complex_bonds2[i].first);
+        }
+        for (int i=0;i<double_bonds1.size();++i)
+        {
+            if (double_bonds1[i]<double_bonds2[i])
+            {
+                return parent_chain;
+            }
+            if (double_bonds1[i]>double_bonds2[i])
             {
                 return parent_chain2;
             }
