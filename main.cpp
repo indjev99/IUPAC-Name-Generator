@@ -57,6 +57,11 @@ struct dictionary
     }
 };
 
+string carbon_symbol="C";
+int carbon_valance=4;
+string halogen_symbol[4]={"F","Cl","Br","I"};
+int halogen_valence=1;
+
 dictionary Bulgarian,English,curr_dict;
 vector<dictionary> dictionaries;
 int curr_dict_N;
@@ -180,8 +185,11 @@ struct compound
 {
     vector<atom> atoms;
     stack<int> free_positions;
+    string name;
+    bool changed;
     int addAtom(atom& a)
     {
+        changed=1;
         int ind;
         if (free_positions.empty())
         {
@@ -198,12 +206,14 @@ struct compound
     }
     int addAtom(string new_symbol, int new_valance, double new_x, double new_y)
     {
+        changed=1;
         if (new_valance<0) return -1;
         atom a(new_symbol,new_valance,new_x,new_y);
         return addAtom(a);
     }
     int addAtom(string new_symbol, int new_valance, double new_x, double new_y, int new_bond)
     {
+        changed=1;
         int ind=-1;
         if (new_valance<=0) return -1;
         if (new_bond>=atoms.size() || atoms[new_bond].symbol=="") return -1;
@@ -217,6 +227,7 @@ struct compound
     }
     int connectAtoms(int a1, int a2)
     {
+        changed=1;
         if (a1<atoms.size() && a2<atoms.size() && a1!=a2 && atoms[a1].symbol!="" && atoms[a2].symbol!="" && atoms[a1].canConnect(a2) && atoms[a2].canConnect(a1))
         {
             atoms[a1].connect(a2);
@@ -227,6 +238,7 @@ struct compound
     }
     int removeAtom(int a)
     {
+        changed=1;
         atom a1;
         if (a<atoms.size())
         {
@@ -277,9 +289,13 @@ struct compound
         }
         return minDistInd;
     }
-    compound() {}
+    compound()
+    {
+        changed=1;
+    }
     compound(string new_symbol, int new_valance, double new_x, double new_y)
     {
+        changed=1;
         addAtom(new_symbol,new_valance,new_x,new_y);
     }
 
@@ -1199,12 +1215,12 @@ struct compound
     }
     string getName()
     {
-        string name;
+        if (!changed) return name;
         int CS=isConnected(); //bond_status
         if (!CS) return curr_dict.NC;
         name=generateName(-1,-1);
 
-        for (int i=0;i<name.size();++i)
+        /*for (int i=0;i<name.size();++i)
         {
             if (name[i]>='a' && name[i]<='z')
             {
@@ -1216,8 +1232,188 @@ struct compound
                 name[i]+='À'-'à';
                 break;
             }
-        }
+        }*/
         return name;
+    }
+    void setName(string name, double x, double y, double distx, double disty)
+    {
+        for (int i=0;i<atoms.size();++i) removeAtom(i);
+        vector<tuple<vector<int>, int, int> > subs;
+        vector<tuple<int, int, int> > s;
+        tuple<vector<int>, int, int> sub;
+        int parent_chain=1;
+        vector<int> double_bonds;
+        vector<int> triple_bonds;
+        string curr,p;
+        int curr_num;
+        vector<int> nums;
+        int last_num;
+        bool was_last_num=0;
+        for (int i=0;i<name.size();++i)
+        {
+            //cerr<<"i: "<<i<<" name[i]: "<<name[i]<<endl;
+            if (name[i]>='0' && name[i]<='9')
+            {
+                //cout<<"CHISLO E"<<endl;
+                curr_num=0;
+                while (i<name.size() && name[i]>='0' && name[i]<='9')
+                {
+                    curr_num*=10;
+                    curr_num+=name[i]-'0';
+                    ++i;
+                }
+                nums.push_back(curr_num);
+                //cout<<"curr_num: "<<curr_num<<endl;
+                was_last_num=1;
+            }
+            else
+            {
+                //cout<<"BUKVA E"<<endl;
+                if (i<=name.size()-2)
+                {
+                    //cerr<<"IMA POVECHE OT 2 BUKVI"<<endl;
+                    if (name.substr(i,2)==curr_dict.FGTS[1].substr(0,2))
+                    {
+                        //cerr<<"ALKANE"<<endl;
+                        parent_chain=last_num;
+                        ++i;
+                        if (i<name.size()-1 && curr_dict.FGTS[1].size()>2 && name[i+1]==curr_dict.FGTS[1][2]) ++i;
+                    }
+                    else if (name.substr(i,2)==curr_dict.FGTS[2].substr(0,2))
+                    {
+                        //cerr<<"ALKENE"<<endl;
+                        parent_chain=last_num;
+                        if (nums.empty()) nums.push_back(1);
+                        double_bonds=nums;
+                        nums.resize(0);
+                        ++i;
+                        if (i<name.size()-1 && curr_dict.FGTS[1].size()>2 && name[i+1]==curr_dict.FGTS[1][2]) ++i;
+                    }
+                    else if (name.substr(i,2)==curr_dict.FGTS[3].substr(0,2))
+                    {
+                        //cerr<<"ALKYNE"<<endl;
+                        parent_chain=last_num;
+                        if (nums.empty()) nums.push_back(1);
+                        triple_bonds=nums;
+                        nums.resize(0);
+                        ++i;
+                        if (i<name.size()-1 && curr_dict.FGTS[1].size()>2 && name[i+1]==curr_dict.FGTS[1][2]) ++i;
+                    }
+                    else if (name.substr(i,2)==curr_dict.SS[1].substr(0,2))
+                    {
+                        //cerr<<"ALKYL(IDEN)"<<endl;
+                        if (nums.empty()) nums.push_back(1);
+                        ++i;
+                        if (i<name.size()-5 && name.substr(i+1,4)==curr_dict.SS[2].substr(2,4))
+                        {
+                            //cerr<<"ALKYLIDENE"<<endl;
+                            sub=make_tuple(nums,2,last_num);
+                            i+=4;
+                            if (i<name.size()-1 && curr_dict.SS[2].size()>6 && name[i+1]==curr_dict.FGTS[1][6]) ++i;
+                        }
+                        else
+                        {
+                            //cerr<<"ALKYL"<<endl;
+                            sub=make_tuple(nums,1,last_num);
+                        }
+                        subs.push_back(sub);
+                        nums.resize(0);
+                    }
+                    else if (was_last_num)
+                    {
+                        //cerr<<"Last was number"<<endl;
+                        i+=curr_dict.getSNP(nums.size()).size()-1;
+                    }
+                    else if (name[i]=='a' || name[i]=='à')
+                    {
+                        //cout<<"TVA E A"<<endl;
+                        continue;
+                    }
+                    else
+                    {
+                        //cout<<"Tva e korena"<<endl;
+                        curr="";
+                        curr_num=0;
+                        while (i<name.size() && name[i]!='-' && name[i]!=',')
+                        {
+                            curr+=name[i];
+                            for (int j=1;j<curr_dict.SNP.size()+1;++j)
+                            {
+                                p=curr_dict.getCNP(j);
+                                if (curr==p.substr(0,p.size()-1))
+                                {
+                                    curr_num=j;
+                                    break;
+                                }
+                            }
+                            if (curr_num!=0) break;
+                            ++i;
+                        }
+                        //cerr<<curr_num<<endl;
+                        if (curr_num!=0) last_num=curr_num;
+                    }
+                }
+                was_last_num=0;
+            }
+        }
+        int pr;
+        for (int i=0;i<subs.size();++i)
+        {
+            sub=subs[i];
+            nums=get<0>(sub);
+            pr=get<1>(sub);
+            curr_num=get<2>(sub);
+            for (int j=0;j<nums.size();++j)
+            {
+                //cerr<<nums[j]<<" "<<pr<<" "<<curr_num<<endl;
+                s.push_back(make_tuple(nums[j],pr,curr_num));
+            }
+        }
+        sort(s.begin(),s.end());
+        //cerr<<"PC: "<<parent_chain<<endl;
+        vector<int> PC;
+        vector<int> been_up;
+        pr=0;
+        for (int i=0;i<parent_chain;++i)
+        {
+            curr_num=addAtom(carbon_symbol,carbon_valance,-(parent_chain/2)*distx+i*distx+x,y);
+            if (i) connectAtoms(pr,curr_num);
+            pr=curr_num;
+            PC.push_back(curr_num);
+            been_up.push_back(0);
+        }
+
+        for (int i=0;i<double_bonds.size();++i)
+        {
+            connectAtoms(PC[double_bonds[i]-1],PC[double_bonds[i]]);
+        }
+
+        for (int i=0;i<triple_bonds.size();++i)
+        {
+            connectAtoms(PC[triple_bonds[i]-1],PC[triple_bonds[i]]);
+            connectAtoms(PC[triple_bonds[i]-1],PC[triple_bonds[i]]);
+        }
+
+        double x2,y2;
+
+        for (int i=0;i<s.size();++i)
+        {
+            pr=PC[get<0>(s[i])-1];
+            x2=-(parent_chain/2)*distx+(get<0>(s[i])-1)*distx+x;
+            if (been_up[get<0>(s[i])-1]==1) disty=-disty;
+            y2=y+disty;
+            for (int j=0;j<get<2>(s[i]);++j)
+            {
+                curr_num=addAtom(carbon_symbol,carbon_valance,x2,y2);
+                connectAtoms(curr_num,pr);
+                if (!j && get<1>(s[i])==2) connectAtoms(curr_num,pr);
+                pr=curr_num;
+                y2+=disty;
+            }
+            if (been_up[get<0>(s[i])-1]==1) disty=-disty;
+            been_up[get<0>(s[i])-1]=1;
+        }
+
     }
 };
 
@@ -1236,6 +1432,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key==GLFW_KEY_RIGHT_SHIFT || key==GLFW_KEY_LEFT_SHIFT && action==GLFW_PRESS) snappingEnabled=!snappingEnabled;
     if (key==GLFW_KEY_R && action==GLFW_PRESS) pressed=-5;
     if (key==GLFW_KEY_L && action==GLFW_PRESS) pressed=-6;
+    if (key==GLFW_KEY_N && action==GLFW_PRESS) pressed=-7;
     if (key==GLFW_KEY_H && action==GLFW_PRESS) pressed=-10;
 
     if (key==GLFW_KEY_F && action==GLFW_PRESS) selected_element[0]=1;
@@ -1953,7 +2150,6 @@ void drawWindow(GLFWwindow* w,compound& c)
     {
         glfwPollEvents();
     }
-    system("cls");
     //cerr<<pressed<<" "<<mxpos<<" "<<mypos<<'\n';
 }
 void snap(double& x, double& y)
@@ -1968,10 +2164,6 @@ void snap(double& x, double& y)
     y=round(y*3.7)/3.7;
     //cerr<<x<<" "<<y<<endl;
 }
-string carbon_symbol="C";
-int carbon_valance=4;
-string halogen_symbol[4]={"F","Cl","Br","I"};
-int halogen_valence=1;
 void help()
 {
     system("cls");
@@ -1980,6 +2172,7 @@ void help()
 void run(GLFWwindow* w)
 {
     string curr_symbol;
+    string name;
     int curr_valence;
     double sx,sy;
     sx=0;
@@ -1993,8 +2186,10 @@ void run(GLFWwindow* w)
     int result;
     while (!glfwWindowShouldClose(w))
     {
-        cout<<c.getName()<<endl;
+        name=c.getName();
+        cout<<name<<endl;
         drawWindow(w,c);
+        system("cls");
         curr_symbol=carbon_symbol;
         curr_valence=carbon_valance;
         for (int i=0;i<4;++i)
@@ -2021,7 +2216,7 @@ void run(GLFWwindow* w)
             sx=0;
             sy=0;
             if (snappingEnabled) snap(sx,sy);
-            c=*(new compound(curr_symbol,curr_valence,sx,sy));
+            c=*(new compound(carbon_symbol,carbon_valance,sx,sy));
             //BACKGROUND_COLOUR_R2=!BACKGROUND_COLOUR_R2;
         }
         if (pressed==-6)
@@ -2029,6 +2224,15 @@ void run(GLFWwindow* w)
             ++curr_dict_N;
             curr_dict_N%=dictionaries.size();
             curr_dict=dictionaries[curr_dict_N];
+        }
+        if (pressed==-7)
+        {
+            system("cls");
+            cin>>name;
+            sx=0;
+            sy=0;
+            if (snappingEnabled) snap(sx,sy);
+            c.setName(name,sx,sy,1.0/3,1.0/3.7);
         }
         if (pressed==-10)
         {
@@ -2090,7 +2294,7 @@ void run(GLFWwindow* w)
                 {
                     if (pressed==GLFW_MOUSE_BUTTON_LEFT) toMove=1;
                     else toMove=0;
-                    if (!c.atoms[last].free_bonds.empty())
+                    if (toMove || !c.atoms[last].free_bonds.empty())
                     {
                         last2=last;
                     }
