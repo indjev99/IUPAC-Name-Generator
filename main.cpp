@@ -66,7 +66,7 @@ string onlyLetters(string a)
             a2+=a[i];
         }
     }
-    cout<<"OL: "<<a<<" "<<a2<<endl;
+    //cerr<<"OL: "<<a<<" "<<a2<<endl;
     return a2;
 }
 bool cmpBySubName(pair<int, string> a, pair<int, string> b)
@@ -620,19 +620,19 @@ struct compound
         vector<int> currPos;
         if (subs.size()==0) return prefixes;
 
-        cerr<<"Before sort: "<<endl;
+        /*cerr<<"Before sort: "<<endl;
         for (int i=0;i<subs.size();++i)
         {
             cerr<<subs[i].first<<" "<<subs[i].second<<endl;
-        }
+        }*/
 
         sort(subs.begin(),subs.end(),cmpBySubName);
 
-        cerr<<"After sort: "<<endl;
+        /*cerr<<"After sort: "<<endl;
         for (int i=0;i<subs.size();++i)
         {
             cerr<<subs[i].first<<" "<<subs[i].second<<endl;
-        }
+        }*/
 
         string curr=subs[0].second;
         for (int i=0;i<subs.size();++i)
