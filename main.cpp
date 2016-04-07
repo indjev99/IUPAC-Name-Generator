@@ -66,6 +66,7 @@ string onlyLetters(string a)
             a2+=a[i];
         }
     }
+    cout<<"OL: "<<a<<" "<<a2<<endl;
     return a2;
 }
 bool cmpBySubName(pair<int, string> a, pair<int, string> b)
@@ -73,7 +74,7 @@ bool cmpBySubName(pair<int, string> a, pair<int, string> b)
     string a2,b2;
     a2=onlyLetters(a.second);
     b2=onlyLetters(b.second);
-    return a<b;
+    return a2<b2;
 }
 
 struct bond
@@ -326,10 +327,8 @@ struct compound
         return ans;
     }
 
-    //string generateName(int in, int out);
-    int isConnected()
+    bool isConnected()
     {
-        int cycle=0,vc;
         atom a;
         stack<int> st;
         vector<bool> vis;
@@ -338,9 +337,57 @@ struct compound
         for (int i=0;i<atoms.size();++i)
         {
             vis[i]=0;
-            if (s==-1 && atoms[i].symbol!="") s=i;
+            if (s==-1 && atoms[i].symbol=="C")
+            {
+                s=i;
+                break;
+            }
         }
         if (s==-1) return 0;
+        st.push(s);
+        vis[s]=1;
+        while (!st.empty())
+        {
+            s=st.top();
+            st.pop();
+            a=atoms[s];
+            for (int i=0;i<a.bonds.size();++i)
+            {
+                s=a.bonds[i].to;
+                if (s!=-1 && !vis[s] && atoms[s].symbol=="C")
+                {
+                    st.push(s);
+                    vis[s]=1;
+                }
+            }
+        }
+        for (int i=0;i<atoms.size();++i)
+        {
+            if (atoms[i].symbol!="" && !vis[i]) return 0;
+        }
+        return 1;
+    }
+    int findAtomInCycle(int in, int out)
+    {
+        int vc;
+        atom a;
+        stack<int> st;
+        vector<bool> vis;
+        int s=-1,s2;
+        vis.resize(atoms.size());
+        if (in==-1)
+        {
+            for (int i=0;i<atoms.size();++i)
+            {
+                vis[i]=0;
+                if (s==-1 && atoms[i].symbol=="C")
+                {
+                    s=i;
+                    break;
+                }
+            }
+        }
+        if (s==-1) return -1;
         st.push(s);
         vis[s]=1;
         while (!st.empty())
@@ -351,24 +398,20 @@ struct compound
             vc=0;
             for (int i=0;i<a.bonds.size();++i)
             {
-                s=a.bonds[i].to;
-                if (s!=-1 && atoms[s].symbol!="")
+                s2=a.bonds[i].to;
+                if (s2!=-1 && atoms[s2].symbol=="C" && s2!=out)
                 {
-                    if (!vis[s])
+                    if (!vis[s2])
                     {
-                        st.push(s);
-                        vis[s]=1;
+                        st.push(s2);
+                        vis[s2]=1;
                     }
                     else ++vc;
                 }
             }
-            if (vc>1) cycle=1;
+            if (vc>1) return s;
         }
-        for (int i=0;i<atoms.size();++i)
-        {
-            if (atoms[i].symbol!="" && !vis[i]) return 0;
-        }
-        return 1+cycle;
+        return -1;
     }
     int findMaxCon()
     {
@@ -448,28 +491,37 @@ struct compound
         ans.second=maxDist;
         return ans;
     }
-    vector<int> findPathFrom(int s, int out)
+    vector<int> findPathFrom(int s, int out, bool cycle)
     {
         atom a;
         int s2;
-        stack<int> st;
+        stack<pair<int, int> > st;
+        pair<int, int> curr;
         vector<int> prev;
         prev.resize(atoms.size());
         for (int i=0;i<prev.size();++i) prev[i]=-2;
-        st.push(s);
-        prev[s]=-1;
+        st.push(make_pair(s,-1));
         while (!st.empty())
         {
-            s=st.top();
+            curr=st.top();
             st.pop();
+            s=curr.first;
+            if (prev[s]!=-2) continue;
+            prev[s]=curr.second;
             a=atoms[s];
             for (int i=0;i<a.bonds.size();++i)
             {
                 s2=a.bonds[i].to;
-                if (s2!=-1 && atoms[s2].symbol=="C" && prev[s2]==-2 && s2!=out)
+                if (s2!=-1 && atoms[s2].symbol=="C"&& s2!=out)
                 {
-                    prev[s2]=s;
-                    st.push(s2);
+                    if (prev[s2]==-2)
+                    {
+                        st.push(make_pair(s2,s));
+                    }
+                    else if (prev[s2]==-1 && cycle && prev[s]!=s2)
+                    {
+                        prev[s2]=s;
+                    }
                 }
             }
         }
@@ -516,26 +568,38 @@ struct compound
         }
         return comp_bonds;
     }
-    vector<pair<int, string> > findSubstituents(vector<int> parent_chain, int out)
+    vector<pair<int, string> > findSubstituents(vector<int> parent_chain, int out, bool wantNames)
     {
         atom a;
         vector<pair<int, string> > subs;
         pair<int, string> sub;
-        for (int i=1;i<parent_chain.size()-1;++i)
+        int PCS=parent_chain.size();
+        for (int i=0;i<PCS;++i)
         {
             a=atoms[parent_chain[i]];
             for (int j=0;j<a.bonds.size();++j)
             {
-                if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[i-1] && a.bonds[j].to!=parent_chain[i+1] && a.bonds[j].to!=out)
+                if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[(i-1+PCS)%PCS] && a.bonds[j].to!=parent_chain[(i+1)%PCS] && a.bonds[j].to!=out)
                 {
-                    //cerr<<i+1<<"-"<<generateName(a.bonds[j].to,parent_chain[i])<<"\n";
                     sub.first=i+1;
-                    sub.second=generateName(a.bonds[j].to,parent_chain[i]);
+                    if (wantNames) sub.second=generateName(a.bonds[j].to,parent_chain[i]);
+                    else sub.second="";
                     subs.push_back(sub);
                 }
             }
         }
         return subs;
+    }
+    bool isParentChainCyclic(vector<int> parent_chain)
+    {
+        if (parent_chain.size()<3) return 0;
+        atom a;
+        a=atoms[parent_chain[parent_chain.size()-1]];
+        for (int i=0;i<a.bonds.size();++i)
+        {
+            if (a.bonds[i].to==parent_chain[0]) return 1;
+        }
+        return 0;
     }
     string findSP(vector<int> pos, string name) //find substituents_prefix
     {
@@ -555,7 +619,21 @@ struct compound
         string prefixes="";
         vector<int> currPos;
         if (subs.size()==0) return prefixes;
+
+        cerr<<"Before sort: "<<endl;
+        for (int i=0;i<subs.size();++i)
+        {
+            cerr<<subs[i].first<<" "<<subs[i].second<<endl;
+        }
+
         sort(subs.begin(),subs.end(),cmpBySubName);
+
+        cerr<<"After sort: "<<endl;
+        for (int i=0;i<subs.size();++i)
+        {
+            cerr<<subs[i].first<<" "<<subs[i].second<<endl;
+        }
+
         string curr=subs[0].second;
         for (int i=0;i<subs.size();++i)
         {
@@ -571,7 +649,7 @@ struct compound
         prefixes+=findSP(currPos,curr);
         return prefixes;
     }
-    vector<int> directParentChain(vector<int> parent_chain, int out)
+    vector<int> directAcyclicParentChain(vector<int> parent_chain, int out)
     {
         atom a;
         vector<int> parent_chain2;
@@ -630,8 +708,8 @@ struct compound
                 return parent_chain2;
             }
         }
-        subs1=findSubstituents(parent_chain,out);
-        subs2=findSubstituents(parent_chain2,out);
+        subs1=findSubstituents(parent_chain,out,0);
+        subs2=findSubstituents(parent_chain2,out,0);
         for (int i=0;i<subs1.size();++i)
         {
             if (subs1[i].first<subs2[i].first)
@@ -644,6 +722,179 @@ struct compound
                 break;
             }
         }
+        return parent_chain;
+    }
+    vector<int> directCyclicParentChain(vector<int> parent_chain, int out)
+    {
+        atom a;
+        vector<vector<int> > parent_chains;
+        vector<vector<int> > parent_chains2;
+        vector<pair<int, string> > subs;
+        vector<pair<int, string> > max_subs;
+        vector<pair<int, int> > complex_bonds;
+        vector<pair<int, int> > max_complex_bonds;
+        vector<int> double_bonds;
+        vector<int> max_double_bonds;
+        pair<int, int> attachment;
+        pair<int, int> max_attachment;
+
+        max_subs.resize(0);
+        max_complex_bonds.resize(0);
+        max_double_bonds.resize(0);
+        max_attachment=make_pair(-1,-1);
+
+
+        int PCS=parent_chain.size();
+        parent_chains.resize(PCS*2);
+        parent_chains[0]=parent_chain;
+        parent_chains[1].resize(PCS);
+        for (int i=0;i<PCS;++i) parent_chains[1][i]=parent_chain[PCS-1-i];
+        for (int i=1;i<PCS;++i)
+        {
+            parent_chains[i*2].resize(PCS);
+            parent_chains[i*2+1].resize(PCS);
+            parent_chains[i*2][0]=parent_chains[i*2-2][PCS-1];
+            parent_chains[i*2+1][0]=parent_chains[i*2-1][PCS-1];
+            for (int j=1;j<PCS;++j)
+            {
+                parent_chains[i*2][j]=parent_chains[i*2-2][j-1];
+                parent_chains[i*2+1][j]=parent_chains[i*2-1][j-1];
+            }
+        }
+
+        for (int i=0;i<parent_chains.size();++i)
+        {
+            parent_chain=parent_chains[i];
+            attachment=findAttachment(parent_chain,out);
+            if ((max_attachment.first==-1 && max_attachment.second==-1) || attachment.first<max_attachment.first)
+            {
+                parent_chains2.resize(0);
+                max_attachment=attachment;
+            }
+            if (attachment.first==max_attachment.first)
+            {
+                parent_chains2.push_back(parent_chain);
+            }
+        }
+
+        int f;
+
+        for (int i=0;i<parent_chains2.size();++i)
+        {
+            parent_chain=parent_chains2[i];
+            complex_bonds=findComplexBonds(parent_chain);
+            f=0;
+            if (max_complex_bonds.empty() && !complex_bonds.empty()) f=1;
+            else
+            {
+                for (int i=0;i<complex_bonds.size();++i)
+                {
+                    if (complex_bonds[i].first<max_complex_bonds[i].first)
+                    {
+                        f=1;
+                        break;
+                    }
+                    if (complex_bonds[i].first>max_complex_bonds[i].first)
+                    {
+                        f=-1;
+                        break;
+                    }
+                }
+            }
+            if (f==1)
+            {
+                f=0;
+                parent_chains.resize(0);
+                max_complex_bonds=complex_bonds;
+            }
+            if (f==0)
+            {
+                parent_chains.push_back(parent_chain);
+            }
+        }
+
+        for (int i=0;i<parent_chains.size();++i)
+        {
+            parent_chain=parent_chains[i];
+            complex_bonds=findComplexBonds(parent_chain);
+            for (int i=0;i<complex_bonds.size();++i)
+            {
+                if (complex_bonds[i].second==2) double_bonds.push_back(complex_bonds[i].first);
+            }
+            f=0;
+            if (max_double_bonds.empty() && !double_bonds.empty()) f=1;
+            else
+            {
+                for (int i=0;i<double_bonds.size();++i)
+                {
+                    if (double_bonds[i]<max_double_bonds[i])
+                    {
+                        f=1;
+                        break;
+                    }
+                    if (double_bonds[i]>max_double_bonds[i])
+                    {
+                        f=-1;
+                        break;
+                    }
+                }
+            }
+            if (f==1)
+            {
+                f=0;
+                parent_chains2.resize(0);
+                max_double_bonds=double_bonds;
+            }
+            if (f==0)
+            {
+                parent_chains2.push_back(parent_chain);
+            }
+        }
+
+        for (int i=0;i<parent_chains2.size();++i)
+        {
+            parent_chain=parent_chains2[i];
+            subs=findSubstituents(parent_chain,out,0);
+            f=0;
+            if (max_subs.empty() && !subs.empty()) f=1;
+            else
+            {
+                for (int i=0;i<subs.size();++i)
+                {
+                    if (subs[i].first<max_subs[i].first)
+                    {
+                        f=1;
+                        break;
+                    }
+                    if (subs[i].first>max_subs[i].first)
+                    {
+                        f=-1;
+                        break;
+                    }
+                }
+            }
+            if (f==1)
+            {
+                f=0;
+                parent_chains.resize(0);
+                max_subs=subs;
+            }
+            if (f==0)
+            {
+                parent_chains.push_back(parent_chain);
+            }
+        }
+
+        parent_chain=parent_chains[0];
+        return parent_chain;
+    }
+    vector<int> directParentChain(vector<int> parent_chain, int out)
+    {
+        if (isParentChainCyclic(parent_chain))
+        {
+            parent_chain=directCyclicParentChain(parent_chain,out);
+        }
+        else parent_chain=directAcyclicParentChain(parent_chain,out);
         return parent_chain;
     }
     vector<int> findParentChain(int in, int out)
@@ -660,106 +911,86 @@ struct compound
         int curr;
         int maxDist=-1;
         int starting_atom;
-        if (in==-1)
+        starting_atom=findAtomInCycle(in,out);
+        if (starting_atom==-1)
         {
-            for (int i=0;i<atoms.size();++i)
+            if (in==-1)
             {
-                if (atoms[i].symbol=="C")
+                for (int i=0;i<atoms.size();++i)
                 {
-                    starting_atom=i;
-                    break;
+                    if (atoms[i].symbol=="C")
+                    {
+                        starting_atom=i;
+                        break;
+                    }
                 }
             }
+            else
+            {
+                starting_atom=in;
+            }
+            candidates=findFarthest(starting_atom,out);
+            for (int i=0;i<candidates.first.size();++i)
+            {
+                candidates2=findFarthest(candidates.first[i],out);
+                if (candidates2.second>maxDist)
+                {
+                    maxDist=candidates2.second;
+                    finalCandidates.resize(0);
+                }
+                if (candidates2.second==maxDist)
+                {
+                    currCandidate.first=candidates.first[i];
+                    for (int i=0;i<candidates2.first.size();++i)
+                    {
+                        currCandidate.second=candidates2.first[i];
+                        finalCandidates.push_back(currCandidate);
+                    }
+                }
+            }
+            for (int i=0;i<finalCandidates.size();++i)
+            {
+                if (finalCandidates[i].first>finalCandidates[i].second) swap(finalCandidates[i].first,finalCandidates[i].second);
+            }
+            sort(finalCandidates.begin(),finalCandidates.end());
+            for (int i=0;i<finalCandidates.size();++i)
+            {
+                if (i==0 || finalCandidates[i].first!=finalCandidates[i-1].first)
+                {
+                    prev=findPathFrom(finalCandidates[i].first,out,0);
+                }
+                if (i==0 || finalCandidates[i].first!=finalCandidates[i-1].first || finalCandidates[i].second!=finalCandidates[i-1].second)
+                {
+                    parent_chain.resize(0);
+                    curr=finalCandidates[i].second;
+                    while (curr!=-1)
+                    {
+                        parent_chain.push_back(curr);
+                        curr=prev[curr];
+                    }
+                    candidateParrentChains.push_back(parent_chain);
+                }
+            }
+            parent_chain=candidateParrentChains[0];
         }
         else
         {
-            starting_atom=in;
+            parent_chain.resize(0);
+            if (in!=-1)
+            {
+                parent_chain.push_back(in);
+                return parent_chain;
+            }
+            prev=findPathFrom(starting_atom,out,1);
+            curr=starting_atom;
+            do
+            {
+                parent_chain.push_back(curr);
+                curr=prev[curr];
+            }
+            while (curr!=starting_atom);
         }
-        candidates=findFarthest(starting_atom,out);
-        for (int i=0;i<candidates.first.size();++i)
-        {
-            candidates2=findFarthest(candidates.first[i],out);
-            if (candidates2.second>maxDist)
-            {
-                maxDist=candidates2.second;
-                finalCandidates.resize(0);
-            }
-            if (candidates2.second==maxDist)
-            {
-                currCandidate.first=candidates.first[i];
-                for (int i=0;i<candidates2.first.size();++i)
-                {
-                    currCandidate.second=candidates2.first[i];
-                    finalCandidates.push_back(currCandidate);
-                }
-            }
-        }
-        for (int i=0;i<finalCandidates.size();++i)
-        {
-            if (finalCandidates[i].first>finalCandidates[i].second) swap(finalCandidates[i].first,finalCandidates[i].second);
-        }
-        sort(finalCandidates.begin(),finalCandidates.end());
-        for (int i=0;i<finalCandidates.size();++i)
-        {
-            if (i==0 || finalCandidates[i].first!=finalCandidates[i-1].first)
-            {
-                prev=findPathFrom(finalCandidates[i].first,out);
-            }
-            if (i==0 || finalCandidates[i].first!=finalCandidates[i-1].first || finalCandidates[i].second!=finalCandidates[i-1].second)
-            {
-                parent_chain.resize(0);
-                curr=finalCandidates[i].second;
-                while (curr!=-1)
-                {
-                    parent_chain.push_back(curr);
-                    curr=prev[curr];
-                }
-                candidateParrentChains.push_back(parent_chain);
-            }
-        }
-        /*int sideChains;
-        for (int i=0;i<candidateParrentChains.size();++i)
-        {
-            sideChains=0;
-            parent_chain=candidateParrentChains[i];
-            for (int j=1;j<parent_chain.size()-1;++j)
-            {
-                a=atoms[parent_chain[j]];
-                for (int o=0;o<a.bonds.size();++o)
-                {
-                    if (a.bonds[o].to!=-1 && a.bonds[o].to!=parent_chain[j-1] && a.bonds[o].to!=parent_chain[j+1] && atoms[a.bonds[o].to].symbol=="C") ++sideChains;
-                }
-            }
-            if (sideChains>maxSideChains)
-            {
-                maxSideChains=sideChains;
-                candidateParrentChains2.resize(0);
-            }
-            if (sideChains==maxSideChains)
-            {
-                candidateParrentChains2.push_back(directParentChain(parent_chain));
-            }
-        }*/
-        /*cout<<"Candidate parent chains: "<<candidateParrentChains2.size()<<endl;
-        for (int i=0;i<candidateParrentChains2.size();++i)
-        {
-            parent_chain=candidateParrentChains2[i];
-            for (int j=0;j<parent_chain.size();++j)
-            {
-                cout<<parent_chain[j]<<" ";
-            }
-            cout<<endl;
-        }*/
-        parent_chain=candidateParrentChains[0];
         return parent_chain;
-    }
-    string getNameStupid(int CS)
-    {
-        string name="";
-        if (CS==2) name=curr_dict.CP;
-        name+=curr_dict.getCNP(atoms.size()-free_positions.size());
-        name+=curr_dict.FGTS[findMaxCon()];
-        return name;
     }
     string generateName(int in, int out)
     {
@@ -774,8 +1005,8 @@ struct compound
         pair<int, int> attachment;
         parent_chain=findParentChain(in,out);
         parent_chain=directParentChain(parent_chain,out);
-        subs=findSubstituents(parent_chain,out);
-        name=findSPs(subs);
+        subs=findSubstituents(parent_chain,out,1);
+        name+=findSPs(subs);
         complex_bonds=findComplexBonds(parent_chain);
         for (int i=0;i<complex_bonds.size();++i)
         {
@@ -841,6 +1072,7 @@ struct compound
                 suffixes.push_back(suffix);
             }
         }
+        if (isParentChainCyclic(parent_chain)) name+=curr_dict.CP;
         name+=curr_dict.getCNP(parent_chain.size());
         for (int i=0;i<suffixes.size();++i)
         {
@@ -864,8 +1096,7 @@ struct compound
         string name;
         int CS=isConnected(); //bond_status
         if (!CS) return curr_dict.NC;
-        if (CS==2) name=getNameStupid(CS);
-        else name=generateName(-1,-1);
+        name=generateName(-1,-1);
 
         for (int i=0;i<name.size();++i)
         {
@@ -1281,7 +1512,6 @@ void drawIndex(int index, double x, double y)
 }
 void drawAtom(atom& a)
 {
-    //cout<<a.x<<" "<<a.y<<" "<<a.symbol<<Hsymbol<<a.free_bonds.size()<<'\n';
     double nextpos;
     if (a.free_bonds.empty())
     {
@@ -1383,19 +1613,19 @@ void drawWindow(GLFWwindow* w,compound& c)
     {
         glfwPollEvents();
     }
-    //cout<<pressed<<" "<<mxpos<<" "<<mypos<<'\n';
+    //cerr<<pressed<<" "<<mxpos<<" "<<mypos<<'\n';
 }
 void snap(double& x, double& y)
 {
     double hx,lx;
-    //cout<<x<<" "<<y<<endl;
+    //cerr<<x<<" "<<y<<endl;
     hx=(round(x*3)+0.2)/3;
     lx=(round(x*3)-1+0.2)/3;
-    //cout<<hx<<" > "<<x<<" > "<<lx<<endl;
+    //cerr<<hx<<" > "<<x<<" > "<<lx<<endl;
     if (hx-x<x-lx) x=hx;
     else x=lx;
     y=round(y*3.7)/3.7;
-    //cout<<x<<" "<<y<<endl;
+    //cerr<<x<<" "<<y<<endl;
 }
 void run(GLFWwindow* w)
 {
