@@ -227,9 +227,19 @@ struct compound
     }
     int connectAtoms(int a1, int a2)
     {
+        int a=findAtomInCycle(-1,-1);
+        vector<int> prev;
         changed=1;
         if (a1<atoms.size() && a2<atoms.size() && a1!=a2 && atoms[a1].symbol!="" && atoms[a2].symbol!="" && atoms[a1].canConnect(a2) && atoms[a2].canConnect(a1))
         {
+            if (a!=-1)
+            {
+                prev=findPathFrom(a1,-1,0);
+                if (prev[a2]!=-2 && atoms[a1].isConnected(a2)==-1)
+                {
+                    return -1;
+                }
+            }
             atoms[a1].connect(a2);
             atoms[a2].connect(a1);
             return 1;
