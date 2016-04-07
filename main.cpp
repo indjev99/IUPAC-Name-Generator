@@ -5,6 +5,8 @@
 #include<stack>
 #include<stdlib.h>
 #include<conio.h>
+#include<math.h>
+#include<unordered_map>
 #include<GLFW/glfw3.h>
 using namespace std;
 
@@ -35,6 +37,9 @@ struct dictionary
     vector<string> SS; //substituent_suffix
     string CP; //cycle_prefix
     string NC; //not_connected
+    string help;
+    string PACTC; //Press any key to continue
+    unordered_map<string, string> HP; //halogen_prefixes
 
     string getCNP(int CN)
     {
@@ -307,6 +312,7 @@ struct compound
                 name.resize(ns);
             }
         }
+        if (suffix[0]>='0' && suffix[0]<='9' && name[name.size()-1]!='-') name+='-';
         name+=suffix;
         return name;
     }
@@ -354,9 +360,9 @@ struct compound
             for (int i=0;i<a.bonds.size();++i)
             {
                 s=a.bonds[i].to;
-                if (s!=-1 && !vis[s] && atoms[s].symbol=="C")
+                if (s!=-1 && !vis[s])
                 {
-                    st.push(s);
+                    if (atoms[s].symbol=="C") st.push(s);
                     vis[s]=1;
                 }
             }
@@ -448,7 +454,7 @@ struct compound
             curr=st.top();
             st.pop();
             a=atoms[curr.first];
-            curr.second+=atoms.size()*atoms.size();
+            curr.second+=atoms.size()*atoms.size()*atoms.size();
             cons=0;
             for (int i=0;i<a.bonds.size();++i)
             {
@@ -456,7 +462,11 @@ struct compound
                 if (s!=-1 && atoms[s].symbol=="C")
                 {
                     ++cons;
-                    if (s==out) curr.second+=atoms.size()*atoms.size()*atoms.size();
+                    if (s==out) curr.second+=atoms.size()*atoms.size()*atoms.size()*atoms.size();
+                }
+                if (s!=-1 && atoms[s].symbol!="C" && atoms[s].symbol!="O")
+                {
+                    curr.second+=atoms.size();
                 }
             }
             cons=max(0,cons-2);
@@ -476,9 +486,10 @@ struct compound
                     vis[s]=1;
                     if (a.bonds[i].spots_taken.size()>1)
                     {
-                        curr.second+=atoms.size();
+                        curr.second+=atoms.size()*atoms.size();
                         st.push(curr);
-                        curr.second-=atoms.size();
+                        curr.second-=atoms.size()*atoms.size();
+                        curr.second-=atoms.size()*atoms.size();
                     }
                     else
                     {
@@ -581,10 +592,20 @@ struct compound
             {
                 if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[(i-1+PCS)%PCS] && a.bonds[j].to!=parent_chain[(i+1)%PCS] && a.bonds[j].to!=out)
                 {
-                    sub.first=i+1;
-                    if (wantNames) sub.second=generateName(a.bonds[j].to,parent_chain[i]);
-                    else sub.second="";
-                    subs.push_back(sub);
+                    if (atoms[a.bonds[j].to].symbol=="C")
+                    {
+                        sub.first=i+1;
+                        if (wantNames) sub.second=generateName(a.bonds[j].to,parent_chain[i]);
+                        else sub.second="";
+                        subs.push_back(sub);
+                    }
+                    else if (atoms[a.bonds[j].to].symbol!="C" && atoms[a.bonds[j].to].symbol!="O")
+                    {
+                        sub.first=i+1;
+                        if (wantNames) sub.second=curr_dict.HP[atoms[a.bonds[j].to].symbol];
+                        else sub.second="";
+                        subs.push_back(sub);
+                    }
                 }
             }
         }
@@ -714,12 +735,26 @@ struct compound
         {
             if (subs1[i].first<subs2[i].first)
             {
-                break;
+                return parent_chain;
             }
             if (subs1[i].first>subs2[i].first)
             {
-                parent_chain=parent_chain2;
-                break;
+                return parent_chain2;
+            }
+        }
+        subs1=findSubstituents(parent_chain,out,1);
+        sort(subs1.begin(),subs1.end(),cmpBySubName);
+        subs2=findSubstituents(parent_chain2,out,1);
+        sort(subs2.begin(),subs2.end(),cmpBySubName);
+        for (int i=0;i<subs1.size();++i)
+        {
+            if (subs1[i].first<subs2[i].first)
+            {
+                return parent_chain;
+            }
+            if (subs1[i].first>subs2[i].first)
+            {
+                return parent_chain2;
             }
         }
         return parent_chain;
@@ -885,7 +920,77 @@ struct compound
             }
         }
 
-        parent_chain=parent_chains[0];
+        for (int i=0;i<parent_chains2.size();++i)
+        {
+            parent_chain=parent_chains2[i];
+            subs=findSubstituents(parent_chain,out,0);
+            f=0;
+            if (max_subs.empty() && !subs.empty()) f=1;
+            else
+            {
+                for (int i=0;i<subs.size();++i)
+                {
+                    if (subs[i].first<max_subs[i].first)
+                    {
+                        f=1;
+                        break;
+                    }
+                    if (subs[i].first>max_subs[i].first)
+                    {
+                        f=-1;
+                        break;
+                    }
+                }
+            }
+            if (f==1)
+            {
+                f=0;
+                parent_chains.resize(0);
+                max_subs=subs;
+            }
+            if (f==0)
+            {
+                parent_chains.push_back(parent_chain);
+            }
+        }
+
+        max_subs.resize(0);
+        for (int i=0;i<parent_chains.size();++i)
+        {
+            parent_chain=parent_chains[i];
+            subs=findSubstituents(parent_chain,out,1);
+            sort(subs.begin(),subs.end(),cmpBySubName);
+            f=0;
+            if (max_subs.empty() && !subs.empty()) f=1;
+            else
+            {
+                for (int i=0;i<subs.size();++i)
+                {
+                    if (subs[i].first<max_subs[i].first)
+                    {
+                        f=1;
+                        break;
+                    }
+                    if (subs[i].first>max_subs[i].first)
+                    {
+                        f=-1;
+                        break;
+                    }
+                }
+            }
+            if (f==1)
+            {
+                f=0;
+                parent_chains2.resize(0);
+                max_subs=subs;
+            }
+            if (f==0)
+            {
+                parent_chains2.push_back(parent_chain);
+            }
+        }
+
+        parent_chain=parent_chains2[0];
         return parent_chain;
     }
     vector<int> directParentChain(vector<int> parent_chain, int out)
@@ -999,6 +1104,7 @@ struct compound
         string suffix;
         vector<int> parent_chain;
         vector<pair<int, string> > subs;
+        vector<pair<int, string> > subsH;
         vector<pair<int, int> > complex_bonds;
         vector<int> double_bonds;
         vector<int> triple_bonds;
@@ -1006,7 +1112,7 @@ struct compound
         parent_chain=findParentChain(in,out);
         parent_chain=directParentChain(parent_chain,out);
         subs=findSubstituents(parent_chain,out,1);
-        name+=findSPs(subs);
+        name=findSPs(subs);
         complex_bonds=findComplexBonds(parent_chain);
         for (int i=0;i<complex_bonds.size();++i)
         {
@@ -1115,6 +1221,8 @@ struct compound
     }
 };
 
+bool selected_element[4];
+
 //Graphics related functions
 GLFWwindow* window,*window2;
 void error_callback(int error, const char* description)
@@ -1128,6 +1236,17 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key==GLFW_KEY_RIGHT_SHIFT || key==GLFW_KEY_LEFT_SHIFT && action==GLFW_PRESS) snappingEnabled=!snappingEnabled;
     if (key==GLFW_KEY_R && action==GLFW_PRESS) pressed=-5;
     if (key==GLFW_KEY_L && action==GLFW_PRESS) pressed=-6;
+    if (key==GLFW_KEY_H && action==GLFW_PRESS) pressed=-10;
+
+    if (key==GLFW_KEY_F && action==GLFW_PRESS) selected_element[0]=1;
+    if (key==GLFW_KEY_C && action==GLFW_PRESS) selected_element[1]=1;
+    if (key==GLFW_KEY_B && action==GLFW_PRESS) selected_element[2]=1;
+    if (key==GLFW_KEY_I && action==GLFW_PRESS) selected_element[3]=1;
+
+    if (key==GLFW_KEY_F && action==GLFW_RELEASE) selected_element[0]=0;
+    if (key==GLFW_KEY_C && action==GLFW_RELEASE) selected_element[1]=0;
+    if (key==GLFW_KEY_B && action==GLFW_RELEASE) selected_element[2]=0;
+    if (key==GLFW_KEY_I && action==GLFW_RELEASE) selected_element[3]=0;
 }
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
@@ -1199,7 +1318,7 @@ double drawSymbol1(char symbol, double x, double y, bool centered)
 {
     if (symbol=='C')
     {
-        if (!centered) x+=0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        if (!centered) x+=0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
         drawPartEllipse(x,y,0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,360);
@@ -1209,11 +1328,11 @@ double drawSymbol1(char symbol, double x, double y, bool centered)
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
         drawPartEllipse(x,y,0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,360);
-        return x+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        return x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
     }
     if (symbol=='O')
     {
-        if (!centered) x+=0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        if (!centered) x+=0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
         drawPartEllipse(x,y,0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,360);
@@ -1227,26 +1346,11 @@ double drawSymbol1(char symbol, double x, double y, bool centered)
     }
     if (symbol=='H')
     {
-        if (!centered) x+=0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        if (!centered) x+=0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
 
         glBegin(GL_QUADS);
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
-
-        /*glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-
-        glVertex2f(x+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-
-        glVertex2f(x-0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);*/
 
         glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
         glVertex2f(x+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
@@ -1271,22 +1375,230 @@ double drawSymbol1(char symbol, double x, double y, bool centered)
         glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
 
         glEnd();
-        return x+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        return x+0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+    }
+    if (symbol=='F')
+    {
+        if (!centered) x+=0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+
+        glBegin(GL_QUADS);
+
+        glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+        glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
+
+        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glEnd();
+        return x+0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+    }
+    if (symbol=='E')
+    {
+        if (!centered) x+=0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+
+        glBegin(GL_QUADS);
+
+        glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+        glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
+
+        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glEnd();
+        return x+0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+    }
+    if (symbol=='I')
+    {
+        if (!centered) x+=0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+
+        glBegin(GL_QUADS);
+
+        glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+        glVertex2f(x-0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
+
+        glVertex2f(x-0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glVertex2f(x-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+
+        glVertex2f(x-0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glEnd();
+        return x+0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+    }
+    if (symbol=='B')
+    {
+        if (!centered) x+=0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+
+        glBegin(GL_QUADS);
+
+        glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.025*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.025*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glEnd();
+
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
+
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
+
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y,0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y,0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
+
+        glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
+
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
+
+        glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.025*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.025*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
+
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
+        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
+
+        glBegin(GL_QUADS);
+
+        glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
+        glVertex2f(x-0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glEnd();
+        return x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+    }
+    if (symbol=='l')
+    {
+        if (!centered) x+=0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+
+        glBegin(GL_QUADS);
+
+        glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+        glVertex2f(x-0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
+
+        glVertex2f(x-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glEnd();
+        return x+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+    }
+    if (symbol=='r')
+    {
+        if (!centered) x+=0.04125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+
+        glBegin(GL_QUADS);
+
+        glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+        glVertex2f(x-0.04125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.04125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.04125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.04125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
+
+        glVertex2f(x-0.03625*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.02125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.02125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.03625*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+
+        glVertex2f(x-0.02125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.015*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.03625*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.015*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.03625*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
+        glVertex2f(x-0.02125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
+
+        glEnd();
+        return x+0.03625*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
     }
 }
 double drawSymbol(string symbol, double x, double y, bool centered)
 {
+    //cerr<<symbol<<endl;
     double nextpos=x;
     for (int i=0;i<symbol.size();++i)
     {
+        //cerr<<" "<<symbol[i];
         if (!i) nextpos=drawSymbol1(symbol[i],nextpos,y,centered);
         else nextpos=drawSymbol1(symbol[i],nextpos,y,0);
+        //cerr<<" "<<nextpos<<endl;
     }
-    return nextpos;
+    return nextpos+0.02;
 }
-void drawIndex(int index, double x, double y)
+double drawIndex(int index, double x, double y)
 {
-    if (index<=1) return;
+    if (index<=1) return x;
     vector<int> digits;
     do
     {
@@ -1509,6 +1821,7 @@ void drawIndex(int index, double x, double y)
             x+=0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
         }
     }
+    return x;
 }
 void drawAtom(atom& a)
 {
@@ -1530,20 +1843,47 @@ void drawAtom(atom& a)
 
         glEnd();
 
-        nextpos=drawSymbol(a.symbol,a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,1);
-        nextpos=drawSymbol(Hsymbol,nextpos,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0);
-        drawIndex(a.free_bonds.size(),nextpos-0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        if (a.symbol=="C" || a.symbol=="O")
+        {
+            nextpos=drawSymbol(a.symbol,a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,1);
+            nextpos=drawSymbol(Hsymbol,nextpos,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0);
+            drawIndex(a.free_bonds.size(),nextpos-0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        }
+        else
+        {
+            nextpos=drawSymbol(Hsymbol,a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,1);
+            nextpos=drawIndex(a.free_bonds.size(),nextpos-0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            nextpos=drawSymbol(a.symbol,nextpos,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0);
+        }
     }
 }
 void drawBond(double x1, double y1, double x2, double y2, int num)
 {
+    double offset,x,y,deltax,deltay;
     glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
     glLineWidth(4.0);
     glBegin(GL_LINES);
+    double alpha,beta;
+    deltax=x2-x1;
+    deltay=y2-y1;
+    if (deltax==0)
+    {
+        x=1;
+        y=0;
+    }
+    else
+    {
+        alpha=atan(deltay/deltax);
+        beta=90*DEG2RAD-alpha;
+        x=cos(beta);
+        y=sin(beta);
+    }
+    x=-x;
     for (int i=0;i<num;++i)
     {
-        glVertex2f((x1+i*0.02-num*0.5*0.02)*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,(y1+i*0.02-num*0.5*0.02)*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f((x2+i*0.02-num*0.5*0.02)*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,(y2+i*0.02-num*0.5*0.02)*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        offset=((num-1)*0.5-i)*0.02;
+        glVertex2f((x1+offset*x)*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,(y1+offset*y)*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f((x2+offset*x)*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,(y2+offset*y)*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
     }
     glEnd();
 }
@@ -1613,6 +1953,7 @@ void drawWindow(GLFWwindow* w,compound& c)
     {
         glfwPollEvents();
     }
+    system("cls");
     //cerr<<pressed<<" "<<mxpos<<" "<<mypos<<'\n';
 }
 void snap(double& x, double& y)
@@ -1627,15 +1968,24 @@ void snap(double& x, double& y)
     y=round(y*3.7)/3.7;
     //cerr<<x<<" "<<y<<endl;
 }
+string carbon_symbol="C";
+int carbon_valance=4;
+string halogen_symbol[4]={"F","Cl","Br","I"};
+int halogen_valence=1;
+void help()
+{
+    system("cls");
+    cout<<curr_dict.help<<endl;
+}
 void run(GLFWwindow* w)
 {
-    string carbonSymbol="C";
-    int carbonValance=4;
+    string curr_symbol;
+    int curr_valence;
     double sx,sy;
     sx=0;
     sy=0;
     if (snappingEnabled) snap(sx,sy);
-    compound c(carbonSymbol,carbonValance,sx,sy);
+    compound c(carbon_symbol,carbon_valance,sx,sy);
     compound c_old=c;
     int last2=-1;
     int last=-1;
@@ -1643,9 +1993,18 @@ void run(GLFWwindow* w)
     int result;
     while (!glfwWindowShouldClose(w))
     {
-        system("cls");
         cout<<c.getName()<<endl;
         drawWindow(w,c);
+        curr_symbol=carbon_symbol;
+        curr_valence=carbon_valance;
+        for (int i=0;i<4;++i)
+        {
+            if (selected_element[i])
+            {
+                curr_symbol=halogen_symbol[i];
+                curr_valence=halogen_valence;
+            }
+        }
         if (pressed==-3)
         {
             last2=-1;
@@ -1662,7 +2021,7 @@ void run(GLFWwindow* w)
             sx=0;
             sy=0;
             if (snappingEnabled) snap(sx,sy);
-            c=*(new compound(carbonSymbol,4,sx,sy));
+            c=*(new compound(curr_symbol,curr_valence,sx,sy));
             //BACKGROUND_COLOUR_R2=!BACKGROUND_COLOUR_R2;
         }
         if (pressed==-6)
@@ -1670,6 +2029,10 @@ void run(GLFWwindow* w)
             ++curr_dict_N;
             curr_dict_N%=dictionaries.size();
             curr_dict=dictionaries[curr_dict_N];
+        }
+        if (pressed==-10)
+        {
+            help();
         }
         last=c.findAtom(mxpos,mypos);
         if (snappingEnabled) snap(mxpos,mypos);
@@ -1702,7 +2065,7 @@ void run(GLFWwindow* w)
                 }
                 else
                 {
-                    result=c.addAtom(carbonSymbol,carbonValance,mxpos,mypos,last2);
+                    result=c.addAtom(curr_symbol,curr_valence,mxpos,mypos,last2);
                     if (result!=-1)
                     {
                         if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[result].free_bonds.empty()) last2=-1;
@@ -1716,7 +2079,7 @@ void run(GLFWwindow* w)
                 if (last==-1)
                 {
                     c_old=c;
-                    result=c.addAtom(carbonSymbol,carbonValance,mxpos,mypos);
+                    result=c.addAtom(curr_symbol,curr_valence,mxpos,mypos);
                     if (result!=-1)
                     {
                         if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[result].free_bonds.empty()) last2=-1;
@@ -1756,7 +2119,16 @@ void setDictionaries()
     "triaconta","hentriaconta","hentriaconta","tritriaconta"};
     English.SS={"error","yl","ylidene"};
     English.CP="cyclo";
+    English.HP["F"]="fluoro";
+    English.HP["Cl"]="chloro";
+    English.HP["Br"]="bromo";
+    English.HP["I"]="iodo";
     English.NC="Not Connected";
+    English.help="Use the Middle Mouse Button to start or continue chains.\nUse the Left Mouse Button to end chains and to move atoms.";
+    English.help+="\nUse the Right mouse button to cancel the current action and remove atoms.\nHold down F,C,B or I in order to place a Fluorine, Chlorine, Bromine or Iodine\natom respectively.";
+    English.help+="\nPress Backspace to undo.\nPress Shift to toggle snapping on and off.\nPress R to reset.\nPress Escape to end the program.\nPress L to change the language.";
+    English.help+="\nPress H for help.";
+    Bulgarian.PACTC="Press any key to continue.";
     dictionaries.push_back(English);
 
     Bulgarian.CNP={"алка","мета","ета","пропа","бута"};
@@ -1765,7 +2137,17 @@ void setDictionaries()
     "дека","ундека","додека","тридека","тетрадека","пентадека","хексадека","хептадека","октадека","нонадека"};
     Bulgarian.SS={"грешка","ил","илиден"};
     Bulgarian.CP="цикло";
+    English.HP["F"]="флуоро";
+    English.HP["Cl"]="хлоро";
+    English.HP["Br"]="бромо";
+    English.HP["I"]="йодо";
     Bulgarian.NC="Не са свързани";
+    Bulgarian.help="Използвайте средния бутон на мишката, за да започнете или продължите вериги.\nИзползвайте левия бутон на мишката, за да завършите вериги\nили да местите атоми.";
+    Bulgarian.help+="\nИзплозвайте десния бутон на мишката, за да откажете текущото действие\nили да махнете атом.\nЗадръжте F,C,B или I, за да сложите флуорен, хлорен, бромен или йоден\nатом съответно.";
+    Bulgarian.help+="\nНатиснете Backspace, за да върнете последното действие.\nНатиснете Shift, за да включите или изключите\nавтоматичното наместване на атомите.\nНатиснете R, за да рестартирате.";
+    Bulgarian.help+="\nНатиснете Escape, за да изключите програмата.\nНатиснете L, за да смените езика.";
+    Bulgarian.help+="\nНатиснете H за инструкции.";
+    Bulgarian.PACTC="Натиснете който и да е клавиш, за да продължите.";
     dictionaries.push_back(Bulgarian);
 
     curr_dict_N=0;
@@ -1779,9 +2161,8 @@ int main()
 
     setDictionaries();
 
-    cout<<"Use the Middle Mouse Button to start or continue chains.\nUse the Left Mouse Button to end chains and to move atoms,"
-    <<"\nUse the Right mouse button to cancel chains and remove atoms.\nPress Backspace to undo.\nPress Shift to toggle snapping on and off."
-    <<"\nPress R to reset.\nPress Escape to end the program.\nPress L to change the language.\nPress any key to continue."<<endl;
+    help();
+    cout<<curr_dict.PACTC<<endl;
     getch();
 
     system("cls");
