@@ -1319,7 +1319,7 @@ struct compound
                         subs.push_back(sub);
                         nums.resize(0);
                     }
-                    else if (was_last_num)
+                    else if (was_last_num && nums.size()>1)
                     {
                         //cerr<<"Last was number"<<endl;
                         i+=curr_dict.getSNP(nums.size()).size()-1;
