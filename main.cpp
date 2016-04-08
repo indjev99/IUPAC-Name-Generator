@@ -248,6 +248,7 @@ struct compound
     }
     int removeAtom(int a)
     {
+
         changed=1;
         atom a1;
         if (a<atoms.size())
@@ -1038,8 +1039,11 @@ struct compound
         vector<int> prev;
         vector<vector<int> > candidateParrentChains;
         vector<vector<int> > candidateParrentChains2;
+        vector<pair<int, int> > complex_bonds;
+        vector<pair<int, int> > max_complex_bonds;
         int maxSideChains=-1;
         int curr;
+        int f;
         int maxDist=-1;
         int starting_atom;
         starting_atom=findAtomInCycle(in,out);
@@ -1102,7 +1106,40 @@ struct compound
                     candidateParrentChains.push_back(parent_chain);
                 }
             }
-            parent_chain=candidateParrentChains[0];
+            for (int i=0;i<candidateParrentChains.size();++i)
+            {
+                parent_chain=directParentChain(candidateParrentChains[i],out);
+                complex_bonds=findComplexBonds(parent_chain);
+                f=0;
+                if (max_complex_bonds.empty() && !complex_bonds.empty()) f=1;
+                else
+                {
+                    for (int i=0;i<complex_bonds.size();++i)
+                    {
+                        if (complex_bonds[i].first<max_complex_bonds[i].first)
+                        {
+                            f=1;
+                            break;
+                        }
+                        if (complex_bonds[i].first>max_complex_bonds[i].first)
+                        {
+                            f=-1;
+                            break;
+                        }
+                    }
+                }
+                if (f==1)
+                {
+                    f=0;
+                    candidateParrentChains2.resize(0);
+                    max_complex_bonds=complex_bonds;
+                }
+                if (f==0)
+                {
+                    candidateParrentChains2.push_back(parent_chain);
+                }
+            }
+            parent_chain=candidateParrentChains2[0];
         }
         else
         {
@@ -2376,7 +2413,7 @@ int main()
     setDictionaries();
 
     help();
-    cout<<curr_dict.PACTC<<endl;
+    cout<<"Press any key to continue."<<endl;
     getch();
 
     system("cls");
