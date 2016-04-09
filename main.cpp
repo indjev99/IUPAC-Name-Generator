@@ -469,7 +469,6 @@ struct compound
         stack<pair<int, int> > st;
         vector<bool> vis;
         pair<int, int> curr;
-        int cons;
         vis.resize(atoms.size());
         for (int i=0;i<vis.size();++i) vis[i]=0;
         curr.first=s;
@@ -481,23 +480,8 @@ struct compound
             curr=st.top();
             st.pop();
             a=atoms[curr.first];
-            curr.second+=atoms.size()*atoms.size()*atoms.size();
-            cons=0;
-            for (int i=0;i<a.bonds.size();++i)
-            {
-                s=a.bonds[i].to;
-                if (s!=-1 && atoms[s].symbol=="C")
-                {
-                    ++cons;
-                    if (s==out) curr.second+=atoms.size()*atoms.size()*atoms.size()*atoms.size();
-                }
-                if (s!=-1 && atoms[s].symbol!="C" && atoms[s].symbol!="O")
-                {
-                    curr.second+=atoms.size();
-                }
-            }
-            cons=max(0,cons-2);
-            curr.second+=cons;
+            curr.second+=atoms.size()*atoms.size();
+            if (a.isConnected(out)) curr.second+=atoms.size()*atoms.size()*atoms.size();
             if (curr.second>maxDist)
             {
                 maxDist=curr.second;
@@ -513,10 +497,11 @@ struct compound
                     vis[s]=1;
                     if (a.bonds[i].spots_taken.size()>1)
                     {
-                        curr.second+=atoms.size()*atoms.size();
+                        curr.second+=atoms.size();
+                        if (a.bonds[i].spots_taken.size()==2) ++curr.second;
                         st.push(curr);
-                        curr.second-=atoms.size()*atoms.size();
-                        curr.second-=atoms.size()*atoms.size();
+                        curr.second-=atoms.size();
+                        if (a.bonds[i].spots_taken.size()==2) --curr.second;
                     }
                     else
                     {
@@ -591,12 +576,12 @@ struct compound
         atom a;
         vector<pair<int, int> > comp_bonds;
         pair<int, int> comp_bond;
-        for (int i=0;i<parent_chain.size()-1;++i)
+        for (int i=0;i<parent_chain.size();++i)
         {
             a=atoms[parent_chain[i]];
             for (int j=0;j<a.bonds.size();++j)
             {
-                if (a.bonds[j].to==parent_chain[i+1] && a.bonds[j].spots_taken.size()>1)
+                if (a.bonds[j].to==parent_chain[(i+1)%parent_chain.size()] && a.bonds[j].spots_taken.size()>1)
                 {
                     comp_bond.first=i+1;
                     comp_bond.second=a.bonds[j].spots_taken.size();
@@ -643,11 +628,8 @@ struct compound
         if (parent_chain.size()<3) return 0;
         atom a;
         a=atoms[parent_chain[parent_chain.size()-1]];
-        for (int i=0;i<a.bonds.size();++i)
-        {
-            if (a.bonds[i].to==parent_chain[0]) return 1;
-        }
-        return 0;
+        if (a.isConnected(parent_chain[0])==-1) return 0;
+        return 1;
     }
     string findSP(vector<int> pos, string name) //find substituents_prefix
     {
@@ -947,40 +929,6 @@ struct compound
             }
         }
 
-        for (int i=0;i<parent_chains2.size();++i)
-        {
-            parent_chain=parent_chains2[i];
-            subs=findSubstituents(parent_chain,out,0);
-            f=0;
-            if (max_subs.empty() && !subs.empty()) f=1;
-            else
-            {
-                for (int i=0;i<subs.size();++i)
-                {
-                    if (subs[i].first<max_subs[i].first)
-                    {
-                        f=1;
-                        break;
-                    }
-                    if (subs[i].first>max_subs[i].first)
-                    {
-                        f=-1;
-                        break;
-                    }
-                }
-            }
-            if (f==1)
-            {
-                f=0;
-                parent_chains.resize(0);
-                max_subs=subs;
-            }
-            if (f==0)
-            {
-                parent_chains.push_back(parent_chain);
-            }
-        }
-
         max_subs.resize(0);
         for (int i=0;i<parent_chains.size();++i)
         {
@@ -1039,6 +987,8 @@ struct compound
         vector<int> prev;
         vector<vector<int> > candidateParrentChains;
         vector<vector<int> > candidateParrentChains2;
+        vector<pair<int, string> > subs;
+        vector<pair<int, string> > max_subs;
         vector<pair<int, int> > complex_bonds;
         vector<pair<int, int> > max_complex_bonds;
         int maxSideChains=-1;
@@ -1133,6 +1083,75 @@ struct compound
                     f=0;
                     candidateParrentChains2.resize(0);
                     max_complex_bonds=complex_bonds;
+                }
+                if (f==0)
+                {
+                    candidateParrentChains2.push_back(parent_chain);
+                }
+            }
+            for (int i=0;i<candidateParrentChains2.size();++i)
+            {
+                parent_chain=directParentChain(candidateParrentChains2[i],out);
+                subs=findSubstituents(parent_chain,out,0);
+                f=0;
+                if (subs.size()>max_subs.size()) f=1;
+                else if (subs.size()<max_subs.size()) f=-1;
+                else
+                {
+                    for (int i=0;i<subs.size();++i)
+                    {
+                        if (subs[i].first<max_subs[i].first)
+                        {
+                            f=1;
+                            break;
+                        }
+                        if (subs[i].first>max_subs[i].first)
+                        {
+                            f=-1;
+                            break;
+                        }
+                    }
+                }
+                if (f==1)
+                {
+                    f=0;
+                    candidateParrentChains.resize(0);
+                    max_subs=subs;
+                }
+                if (f==0)
+                {
+                    candidateParrentChains.push_back(parent_chain);
+                }
+            }
+            max_subs.resize(0);
+            for (int i=0;i<candidateParrentChains.size();++i)
+            {
+                parent_chain=directParentChain(candidateParrentChains[i],out);
+                subs=findSubstituents(parent_chain,out,0);
+                sort(subs.begin(),subs.end(),cmpBySubName);
+                f=0;
+                if (max_subs.empty() && !subs.empty()) f=1;
+                else
+                {
+                    for (int i=0;i<subs.size();++i)
+                    {
+                        if (subs[i].first<max_subs[i].first)
+                        {
+                            f=1;
+                            break;
+                        }
+                        if (subs[i].first>max_subs[i].first)
+                        {
+                            f=-1;
+                            break;
+                        }
+                    }
+                }
+                if (f==1)
+                {
+                    f=0;
+                    candidateParrentChains2.resize(0);
+                    max_subs=subs;
                 }
                 if (f==0)
                 {
@@ -2388,10 +2407,10 @@ void setDictionaries()
     "дека","ундека","додека","тридека","тетрадека","пентадека","хексадека","хептадека","октадека","нонадека"};
     Bulgarian.SS={"грешка","ил","илиден"};
     Bulgarian.CP="цикло";
-    English.HP["F"]="флуоро";
-    English.HP["Cl"]="хлоро";
-    English.HP["Br"]="бромо";
-    English.HP["I"]="йодо";
+    Bulgarian.HP["F"]="флуоро";
+    Bulgarian.HP["Cl"]="хлоро";
+    Bulgarian.HP["Br"]="бромо";
+    Bulgarian.HP["I"]="йодо";
     Bulgarian.NC="Не са свързани";
     Bulgarian.help="Използвайте средния бутон на мишката, за да започнете или продължите вериги.\nИзползвайте левия бутон на мишката, за да завършите вериги\nили да местите атоми.";
     Bulgarian.help+="\nИзплозвайте десния бутон на мишката, за да откажете текущото действие\nили да махнете атом.\nЗадръжте F,C,B или I, за да сложите флуорен, хлорен, бромен или йоден\nатом съответно.";
