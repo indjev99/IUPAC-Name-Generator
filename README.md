@@ -1,7 +1,8 @@
 # IUPAC Name Generator
-Generates the names of organic compounds. Also doest the reverse thing.
+Generates the IUPAC names of organic compounds. Also does the reverse thing.
 
-![6-butyl-6,7-diethyl-5,7,8,11-tetramethyl-2-dodecen-9-yne](https://cloud.githubusercontent.com/assets/12662877/14319404/bdea00c8-fc19-11e5-9935-25cf049fce54.png "IUPAC Name Generator")
+![2- 3-fluorobut-3-en-2-yl -4- 1-iodopropan-2-ylidene cyclohex-2-en-5-yn-1-ol](https://cloud.githubusercontent.com/assets/12662877/14407978/d5c450b4-fee8-11e5-8020-9bffdac73fa1.png "IUPAC Name Generator")
+
 
 
 This project uses the GLFW library and OpenGL.
