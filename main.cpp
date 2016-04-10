@@ -2,6 +2,7 @@
 #include<iostream>
 #include<algorithm>
 #include<vector>
+#include<deque>
 #include<stack>
 #include<stdlib.h>
 #include<conio.h>
@@ -2547,13 +2548,14 @@ void run(GLFWwindow* w)
     sy=0;
     if (snappingEnabled) snap(sx,sy);
     compound c(element_symbol[1],element_valence[1],sx,sy);
-    compound c_old=c;
+    deque<compound> history={c};
     int last2=-1;
     int last=-1;
     bool toMove=0;
     int result;
     while (!glfwWindowShouldClose(w))
     {
+        if (history.size()>50) history.pop_front();
         name=c.getName();
         cout<<name<<endl;
         drawWindow(w,c);
@@ -2573,11 +2575,11 @@ void run(GLFWwindow* w)
             last2=-1;
             last=-1;
             toMove=0;
-            swap(c,c_old);
+            if (history.size()>1) history.pop_back();
+            c=history.back();
         }
         if (pressed==-5)
         {
-            c_old=c;
             last2=-1;
             last=-1;
             toMove=0;
@@ -2585,6 +2587,7 @@ void run(GLFWwindow* w)
             sy=0;
             if (snappingEnabled) snap(sx,sy);
             c=*(new compound(element_symbol[1],element_valence[1],sx,sy));
+            history.push_back(c);
             //BACKGROUND_COLOUR_R2=!BACKGROUND_COLOUR_R2;
         }
         if (pressed==-6)
@@ -2601,6 +2604,7 @@ void run(GLFWwindow* w)
             sy=0;
             if (snappingEnabled) snap(sx,sy);
             c.setName(name,sx,sy,1.0/3,1.0/3.7);
+            history.push_back(c);
         }
         if (pressed==-10)
         {
@@ -2614,10 +2618,10 @@ void run(GLFWwindow* w)
             //cerr<<"Connect: "<<last<<" "<<last2<<'\n'<<endl;
             if (last2!=-1)
             {
-                c_old=c;
                 if (toMove)
                 {
                     result=c.moveAtom(last2,mxpos,mypos);
+                    history.push_back(c);
                     if (pressed==GLFW_MOUSE_BUTTON_LEFT || result==-1)
                     {
                         last2=-1;
@@ -2629,6 +2633,7 @@ void run(GLFWwindow* w)
                     result=c.connectAtoms(last2,last);
                     if (result!=-1)
                     {
+                        history.push_back(c);
                         if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[last].free_bonds.empty()) last2=-1;
                         else last2=last;
                     }
@@ -2640,6 +2645,7 @@ void run(GLFWwindow* w)
                     result=c.addAtom(curr_symbol,curr_valence,mxpos,mypos,last2);
                     if (result!=-1)
                     {
+                        history.push_back(c);
                         if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[result].free_bonds.empty()) last2=-1;
                         else last2=result;
                     }
@@ -2650,8 +2656,8 @@ void run(GLFWwindow* w)
             {
                 if (last==-1)
                 {
-                    c_old=c;
                     result=c.addAtom(curr_symbol,curr_valence,mxpos,mypos);
+                    history.push_back(c);
                     if (result!=-1)
                     {
                         if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[result].free_bonds.empty()) last2=-1;
@@ -2675,8 +2681,8 @@ void run(GLFWwindow* w)
             toMove=0;
             if (last!=-1)
             {
-                c_old=c;
                 result=c.removeAtom(last);
+                history.push_back(c);
             }
         }
     }
