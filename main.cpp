@@ -118,6 +118,7 @@ struct atom
     }
     bool canConnect(int bond)
     {
+        if (symbol=="O" && free_bonds.size()<2) return 0; //remove to add ketones and eters and so on
         if (!free_bonds.empty())
         {
             int nc=isConnected(bond);
@@ -481,7 +482,11 @@ struct compound
             st.pop();
             a=atoms[curr.first];
             curr.second+=atoms.size()*atoms.size();
-            if (a.isConnected(out)) curr.second+=atoms.size()*atoms.size()*atoms.size();
+            if (a.isConnected(out)!=-1) curr.second+=atoms.size()*atoms.size()*atoms.size()*atoms.size();
+            for (int i=0;i<a.bonds.size();++i)
+            {
+                if (a.bonds[i].to!=-1 && atoms[a.bonds[i].to].symbol=="O" && !atoms[a.bonds[i].to].free_bonds.empty()) curr.second+=atoms.size()*atoms.size()*atoms.size();
+            }
             if (curr.second>maxDist)
             {
                 maxDist=curr.second;
@@ -556,6 +561,7 @@ struct compound
         pair<int, int> attachment;
         attachment.first=0;
         attachment.second=0;
+        if (out==-1) return attachment;
         for (int i=0;i<parent_chain.size();++i)
         {
             a=atoms[parent_chain[i]];
@@ -623,6 +629,27 @@ struct compound
         }
         return subs;
     }
+    vector<int> findOHGroups(vector<int> parent_chain, int out)
+    {
+        atom a;
+        vector<int> OHs;
+        int PCS=parent_chain.size();
+        for (int i=0;i<PCS;++i)
+        {
+            a=atoms[parent_chain[i]];
+            for (int j=0;j<a.bonds.size();++j)
+            {
+                if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[(i-1+PCS)%PCS] && a.bonds[j].to!=parent_chain[(i+1)%PCS] && a.bonds[j].to!=out)
+                {
+                    if (atoms[a.bonds[j].to].symbol=="O")
+                    {
+                        OHs.push_back(i+1);
+                    }
+                }
+            }
+        }
+        return OHs;
+    }
     bool isParentChainCyclic(vector<int> parent_chain)
     {
         if (parent_chain.size()<3) return 0;
@@ -683,19 +710,24 @@ struct compound
     {
         atom a;
         vector<int> parent_chain2;
-        vector<pair<int, string> > subs1;
-        vector<pair<int, string> > subs2;
+        pair<int, int> attachment1;
+        pair<int, int> attachment2;
+        vector<int> OHs1;
+        vector<int> OHs2;
         vector<pair<int, int> > complex_bonds1;
         vector<pair<int, int> > complex_bonds2;
         vector<int> double_bonds1;
         vector<int> double_bonds2;
-        pair<int, int> attachment1;
-        pair<int, int> attachment2;
+        vector<pair<int, string> > subs1;
+        vector<pair<int, string> > subs2;
         parent_chain2.resize(parent_chain.size());
+        //cerr<<"PC: ";
         for (int i=0;i<parent_chain.size();++i)
         {
+            //cerr<<parent_chain[i]<<" ";
             parent_chain2[parent_chain.size()-1-i]=parent_chain[i];
         }
+        //cerr<<endl;
         attachment1=findAttachment(parent_chain,out);
         attachment2=findAttachment(parent_chain2,out);
         if (attachment1.first<attachment2.first)
@@ -706,6 +738,21 @@ struct compound
         {
             return parent_chain2;
         }
+        //cerr<<"PAST ATTACHMENTS"<<endl;
+        OHs1=findOHGroups(parent_chain,out);
+        OHs2=findOHGroups(parent_chain2,out);
+        for (int i=0;i<OHs1.size();++i)
+        {
+            if (OHs1[i]<OHs2[i])
+            {
+                return parent_chain;
+            }
+            if (OHs1[i]>OHs2[i])
+            {
+                return parent_chain2;
+            }
+        }
+        //cerr<<"PAST HYDROXYLS"<<endl;
         complex_bonds1=findComplexBonds(parent_chain);
         complex_bonds2=findComplexBonds(parent_chain2);
         for (int i=0;i<complex_bonds1.size();++i)
@@ -719,6 +766,7 @@ struct compound
                 return parent_chain2;
             }
         }
+        //cerr<<"PAST COMPLEX"<<endl;
         for (int i=0;i<complex_bonds1.size();++i)
         {
             if (complex_bonds1[i].second==2) double_bonds1.push_back(complex_bonds1[i].first);
@@ -738,10 +786,13 @@ struct compound
                 return parent_chain2;
             }
         }
+        //cerr<<"PAST DOUBLE"<<endl;
         subs1=findSubstituents(parent_chain,out,0);
         subs2=findSubstituents(parent_chain2,out,0);
+        //cerr<<subs1.size()<<" "<<subs2.size()<<endl;
         for (int i=0;i<subs1.size();++i)
         {
+            //cerr<<"SUB1: "<<i<<" "<<subs1[i].first<<" "<<subs2[i].first<<endl;
             if (subs1[i].first<subs2[i].first)
             {
                 return parent_chain;
@@ -755,8 +806,10 @@ struct compound
         sort(subs1.begin(),subs1.end(),cmpBySubName);
         subs2=findSubstituents(parent_chain2,out,1);
         sort(subs2.begin(),subs2.end(),cmpBySubName);
+        //cerr<<subs1.size()<<" "<<subs2.size()<<endl;
         for (int i=0;i<subs1.size();++i)
         {
+            //cerr<<"SUB2: "<<i<<" "<<subs1[i].first<<" "<<subs2[i].first<<endl;
             if (subs1[i].first<subs2[i].first)
             {
                 return parent_chain;
@@ -773,19 +826,22 @@ struct compound
         atom a;
         vector<vector<int> > parent_chains;
         vector<vector<int> > parent_chains2;
-        vector<pair<int, string> > subs;
-        vector<pair<int, string> > max_subs;
+        pair<int, int> attachment;
+        pair<int, int> max_attachment;
+        vector<int> OHs;
+        vector<int> max_OHs;
         vector<pair<int, int> > complex_bonds;
         vector<pair<int, int> > max_complex_bonds;
         vector<int> double_bonds;
         vector<int> max_double_bonds;
-        pair<int, int> attachment;
-        pair<int, int> max_attachment;
+        vector<pair<int, string> > subs;
+        vector<pair<int, string> > max_subs;
+        int f;
 
         max_subs.resize(0);
         max_complex_bonds.resize(0);
         max_double_bonds.resize(0);
-        max_attachment=make_pair(-1,-1);
+        max_attachment=make_pair(0,0);
 
 
         int PCS=parent_chain.size();
@@ -805,27 +861,76 @@ struct compound
                 parent_chains[i*2+1][j]=parent_chains[i*2-1][j-1];
             }
         }
+        //cerr<<endl;
+        //cerr<<"AFTER GENERATION: "<<parent_chains.size()<<endl;
 
+        parent_chains2.resize(0);
         for (int i=0;i<parent_chains.size();++i)
         {
             parent_chain=parent_chains[i];
             attachment=findAttachment(parent_chain,out);
-            if ((max_attachment.first==-1 && max_attachment.second==-1) || attachment.first<max_attachment.first)
+            f=0;
+            if (attachment.first!=0 && (max_attachment.first==0 || attachment.first<max_attachment.first))
             {
+                f=1;
+            }
+            else if (max_attachment.first!=0 && (attachment.first>max_attachment.first))
+            {
+                f=-1;
+            }
+            if (f==1)
+            {
+                f=0;
                 parent_chains2.resize(0);
                 max_attachment=attachment;
             }
-            if (attachment.first==max_attachment.first)
+            if (f==0)
             {
                 parent_chains2.push_back(parent_chain);
             }
         }
+        //cerr<<"AFTER ATTACHMENT: "<<parent_chains2.size()<<endl;
 
-        int f;
-
+        parent_chains.resize(0);
         for (int i=0;i<parent_chains2.size();++i)
         {
             parent_chain=parent_chains2[i];
+            OHs=findOHGroups(parent_chain,out);
+            f=0;
+            if (max_OHs.empty() && !OHs.empty()) f=1;
+            else
+            {
+                for (int i=0;i<OHs.size();++i)
+                {
+                    if (OHs[i]<max_OHs[i])
+                    {
+                        f=1;
+                        break;
+                    }
+                    if (OHs[i]>max_OHs[i])
+                    {
+                        f=-1;
+                        break;
+                    }
+                }
+            }
+            if (f==1)
+            {
+                f=0;
+                parent_chains.resize(0);
+                max_OHs=OHs;
+            }
+            if (f==0)
+            {
+                parent_chains.push_back(parent_chain);
+            }
+        }
+        //cerr<<"AFTER OH GROUPS: "<<parent_chains.size()<<endl;
+
+        parent_chains2.resize(0);
+        for (int i=0;i<parent_chains.size();++i)
+        {
+            parent_chain=parent_chains[i];
             complex_bonds=findComplexBonds(parent_chain);
             f=0;
             if (max_complex_bonds.empty() && !complex_bonds.empty()) f=1;
@@ -848,19 +953,22 @@ struct compound
             if (f==1)
             {
                 f=0;
-                parent_chains.resize(0);
+                parent_chains2.resize(0);
                 max_complex_bonds=complex_bonds;
             }
             if (f==0)
             {
-                parent_chains.push_back(parent_chain);
+                parent_chains2.push_back(parent_chain);
             }
         }
+        //cerr<<"AFTER COMPLEX BONDS: "<<parent_chains2.size()<<endl;
 
-        for (int i=0;i<parent_chains.size();++i)
+        parent_chains.resize(0);
+        for (int i=0;i<parent_chains2.size();++i)
         {
-            parent_chain=parent_chains[i];
+            parent_chain=parent_chains2[i];
             complex_bonds=findComplexBonds(parent_chain);
+            double_bonds.resize(0);
             for (int i=0;i<complex_bonds.size();++i)
             {
                 if (complex_bonds[i].second==2) double_bonds.push_back(complex_bonds[i].first);
@@ -886,19 +994,59 @@ struct compound
             if (f==1)
             {
                 f=0;
-                parent_chains2.resize(0);
+                parent_chains.resize(0);
                 max_double_bonds=double_bonds;
+            }
+            if (f==0)
+            {
+                parent_chains.push_back(parent_chain);
+            }
+        }
+        //cerr<<"AFTER DOUBLE BONDS: "<<parent_chains.size()<<endl;
+
+        parent_chains2.resize(0);
+        for (int i=0;i<parent_chains.size();++i)
+        {
+            parent_chain=parent_chains[i];
+            subs=findSubstituents(parent_chain,out,0);
+            f=0;
+            if (max_subs.empty() && !subs.empty()) f=1;
+            else
+            {
+                for (int i=0;i<subs.size();++i)
+                {
+                    if (subs[i].first<max_subs[i].first)
+                    {
+                        f=1;
+                        break;
+                    }
+                    if (subs[i].first>max_subs[i].first)
+                    {
+                        f=-1;
+                        break;
+                    }
+                }
+            }
+            if (f==1)
+            {
+                f=0;
+                parent_chains2.resize(0);
+                max_subs=subs;
             }
             if (f==0)
             {
                 parent_chains2.push_back(parent_chain);
             }
         }
+        //cerr<<"AFTER SUBS: "<<parent_chains2.size()<<endl;
 
+        parent_chains.resize(0);
+        max_subs.resize(0);
         for (int i=0;i<parent_chains2.size();++i)
         {
             parent_chain=parent_chains2[i];
-            subs=findSubstituents(parent_chain,out,0);
+            subs=findSubstituents(parent_chain,out,1);
+            sort(subs.begin(),subs.end(),cmpBySubName);
             f=0;
             if (max_subs.empty() && !subs.empty()) f=1;
             else
@@ -928,44 +1076,9 @@ struct compound
                 parent_chains.push_back(parent_chain);
             }
         }
+        //cerr<<"AFTER SORTED SUBS: "<<parent_chains.size()<<endl;
 
-        max_subs.resize(0);
-        for (int i=0;i<parent_chains.size();++i)
-        {
-            parent_chain=parent_chains[i];
-            subs=findSubstituents(parent_chain,out,1);
-            sort(subs.begin(),subs.end(),cmpBySubName);
-            f=0;
-            if (max_subs.empty() && !subs.empty()) f=1;
-            else
-            {
-                for (int i=0;i<subs.size();++i)
-                {
-                    if (subs[i].first<max_subs[i].first)
-                    {
-                        f=1;
-                        break;
-                    }
-                    if (subs[i].first>max_subs[i].first)
-                    {
-                        f=-1;
-                        break;
-                    }
-                }
-            }
-            if (f==1)
-            {
-                f=0;
-                parent_chains2.resize(0);
-                max_subs=subs;
-            }
-            if (f==0)
-            {
-                parent_chains2.push_back(parent_chain);
-            }
-        }
-
-        parent_chain=parent_chains2[0];
+        parent_chain=parent_chains[0];
         return parent_chain;
     }
     vector<int> directParentChain(vector<int> parent_chain, int out)
@@ -985,12 +1098,16 @@ struct compound
         pair<int, int> currCandidate;
         vector<int> parent_chain={0};
         vector<int> prev;
-        vector<vector<int> > candidateParrentChains;
-        vector<vector<int> > candidateParrentChains2;
+        vector<vector<int> > candidateParentChains;
+        vector<vector<int> > candidateParentChains2;
         vector<pair<int, string> > subs;
         vector<pair<int, string> > max_subs;
         vector<pair<int, int> > complex_bonds;
         vector<pair<int, int> > max_complex_bonds;
+        vector<int> double_bonds;
+        vector<int> max_double_bonds;
+        pair<int, int> attachment;
+        pair<int, int> max_attachment={0,0};
         int maxSideChains=-1;
         int curr;
         int f;
@@ -1026,9 +1143,10 @@ struct compound
                 if (candidates2.second==maxDist)
                 {
                     currCandidate.first=candidates.first[i];
-                    for (int i=0;i<candidates2.first.size();++i)
+                    for (int j=0;j<candidates2.first.size();++j)
                     {
-                        currCandidate.second=candidates2.first[i];
+                        //cerr<<"FC1: "<<candidates.first[i]<<" "<<candidates2.first[j]<<endl;
+                        currCandidate.second=candidates2.first[j];
                         finalCandidates.push_back(currCandidate);
                     }
                 }
@@ -1038,6 +1156,7 @@ struct compound
                 if (finalCandidates[i].first>finalCandidates[i].second) swap(finalCandidates[i].first,finalCandidates[i].second);
             }
             sort(finalCandidates.begin(),finalCandidates.end());
+            candidateParentChains2.resize(0);
             for (int i=0;i<finalCandidates.size();++i)
             {
                 if (i==0 || finalCandidates[i].first!=finalCandidates[i-1].first)
@@ -1053,12 +1172,40 @@ struct compound
                         parent_chain.push_back(curr);
                         curr=prev[curr];
                     }
-                    candidateParrentChains.push_back(parent_chain);
+                    candidateParentChains2.push_back(directParentChain(parent_chain,out));
                 }
             }
-            for (int i=0;i<candidateParrentChains.size();++i)
+            //cerr<<"PRE ATTACHMENT LOCANTS: "<<candidateParentChains2.size()<<endl;
+            candidateParentChains.resize(0);
+            for (int i=0;i<candidateParentChains2.size();++i)
             {
-                parent_chain=directParentChain(candidateParrentChains[i],out);
+                parent_chain=candidateParentChains2[i];
+                attachment=findAttachment(parent_chain,out);
+                f=0;
+                if (attachment.first!=0 && (max_attachment.first==0 || attachment.first<max_attachment.first))
+                {
+                    f=1;
+                }
+                else if (max_attachment.first!=0 && (attachment.first>max_attachment.first))
+                {
+                    f=-1;
+                }
+                if (f==1)
+                {
+                    f=0;
+                    candidateParentChains.resize(0);
+                    max_attachment=attachment;
+                }
+                if (f==0)
+                {
+                    candidateParentChains.push_back(parent_chain);
+                }
+            }
+            //cerr<<"PRE COMPLEX BOND LOCANTS: "<<candidateParentChains.size()<<endl;
+            candidateParentChains2.resize(0);
+            for (int i=0;i<candidateParentChains.size();++i)
+            {
+                parent_chain=candidateParentChains[i];
                 complex_bonds=findComplexBonds(parent_chain);
                 f=0;
                 if (max_complex_bonds.empty() && !complex_bonds.empty()) f=1;
@@ -1081,17 +1228,59 @@ struct compound
                 if (f==1)
                 {
                     f=0;
-                    candidateParrentChains2.resize(0);
+                    candidateParentChains2.resize(0);
                     max_complex_bonds=complex_bonds;
                 }
                 if (f==0)
                 {
-                    candidateParrentChains2.push_back(parent_chain);
+                    candidateParentChains2.push_back(parent_chain);
                 }
             }
-            for (int i=0;i<candidateParrentChains2.size();++i)
+            //cerr<<"PRE DOUBLE BOND LOCANTS: "<<candidateParentChains2.size()<<endl;
+            candidateParentChains.resize(0);
+            for (int i=0;i<candidateParentChains2.size();++i)
             {
-                parent_chain=directParentChain(candidateParrentChains2[i],out);
+                parent_chain=candidateParentChains2[i];
+                complex_bonds=findComplexBonds(parent_chain);
+                double_bonds.resize(0);
+                for (int i=0;i<complex_bonds.size();++i)
+                {
+                    if (complex_bonds[i].second==2) double_bonds.push_back(complex_bonds[i].first);
+                }
+                f=0;
+                if (max_double_bonds.empty() && !double_bonds.empty()) f=1;
+                else
+                {
+                    for (int i=0;i<double_bonds.size();++i)
+                    {
+                        if (double_bonds[i]<max_double_bonds[i])
+                        {
+                            f=1;
+                            break;
+                        }
+                        if (double_bonds[i]>max_double_bonds[i])
+                        {
+                            f=-1;
+                            break;
+                        }
+                    }
+                }
+                if (f==1)
+                {
+                    f=0;
+                    candidateParentChains.resize(0);
+                    max_double_bonds=double_bonds;
+                }
+                if (f==0)
+                {
+                    candidateParentChains.push_back(parent_chain);
+                }
+            }
+            //cerr<<"PRE SUB NUMBERS AND LOCANTS: "<<candidateParentChains.size()<<endl;
+            candidateParentChains2.resize(0);
+            for (int i=0;i<candidateParentChains.size();++i)
+            {
+                parent_chain=candidateParentChains[i];
                 subs=findSubstituents(parent_chain,out,0);
                 f=0;
                 if (subs.size()>max_subs.size()) f=1;
@@ -1115,19 +1304,21 @@ struct compound
                 if (f==1)
                 {
                     f=0;
-                    candidateParrentChains.resize(0);
+                    candidateParentChains2.resize(0);
                     max_subs=subs;
                 }
                 if (f==0)
                 {
-                    candidateParrentChains.push_back(parent_chain);
+                    candidateParentChains2.push_back(parent_chain);
                 }
             }
+            //cerr<<"PRE SORTED SUBS LOCANTS: "<<candidateParentChains2.size()<<endl;
+            candidateParentChains.resize(0);
             max_subs.resize(0);
-            for (int i=0;i<candidateParrentChains.size();++i)
+            for (int i=0;i<candidateParentChains2.size();++i)
             {
-                parent_chain=directParentChain(candidateParrentChains[i],out);
-                subs=findSubstituents(parent_chain,out,0);
+                parent_chain=candidateParentChains2[i];
+                subs=findSubstituents(parent_chain,out,1);
                 sort(subs.begin(),subs.end(),cmpBySubName);
                 f=0;
                 if (max_subs.empty() && !subs.empty()) f=1;
@@ -1150,15 +1341,16 @@ struct compound
                 if (f==1)
                 {
                     f=0;
-                    candidateParrentChains2.resize(0);
+                    candidateParentChains.resize(0);
                     max_subs=subs;
                 }
                 if (f==0)
                 {
-                    candidateParrentChains2.push_back(parent_chain);
+                    candidateParentChains.push_back(parent_chain);
                 }
             }
-            parent_chain=candidateParrentChains2[0];
+            //cerr<<"PRE CHOICE: "<<candidateParentChains.size()<<endl;
+            parent_chain=candidateParentChains[0];
         }
         else
         {
@@ -1181,21 +1373,23 @@ struct compound
     }
     string generateName(int in, int out)
     {
+        //cerr<<"IN/OUT: "<<in<<" "<<out<<endl;
         string name="";
         vector<string> suffixes;
         string suffix;
         vector<int> parent_chain;
-        vector<pair<int, string> > subs;
-        vector<pair<int, string> > subsH;
+        pair<int, int> attachment;
+        vector<int> OHs;
         vector<pair<int, int> > complex_bonds;
         vector<int> double_bonds;
         vector<int> triple_bonds;
-        pair<int, int> attachment;
+        vector<pair<int, string> > subs;
         parent_chain=findParentChain(in,out);
         parent_chain=directParentChain(parent_chain,out);
         subs=findSubstituents(parent_chain,out,1);
         name=findSPs(subs);
         complex_bonds=findComplexBonds(parent_chain);
+        OHs=findOHGroups(parent_chain,out);
         for (int i=0;i<complex_bonds.size();++i)
         {
             if (complex_bonds[i].second==2) double_bonds.push_back(complex_bonds[i].first);
@@ -1240,6 +1434,23 @@ struct compound
             suffix=curr_dict.CBI[1];
             suffixes.push_back(suffix);
         }
+        if (!OHs.empty())
+        {
+            suffix="";
+            if (parent_chain.size()>2)
+            {
+                suffix+='-';
+                for(int i=0;i<OHs.size();++i)
+                {
+                    if (i) suffix+=',';
+                    suffix+=intToString(OHs[i]);
+                }
+                suffix+='-';
+            }
+            if (OHs.size()>1) suffix+=curr_dict.getNP(OHs.size());
+            suffix+=curr_dict.FGS["OH"];
+            suffixes.push_back(suffix);
+        }
         if (in!=-1)
         {
             suffix="";
@@ -1277,6 +1488,7 @@ struct compound
                 }
             }
         }
+        //cerr<<"FOR IN/OUT: "<<in<<" "<<out<<" name: "<<name<<endl;
         return name;
     }
     string getName()
@@ -1324,7 +1536,7 @@ struct compound
             //cerr<<"i: "<<i<<" name[i]: "<<name[i]<<endl;
             if (name[i]>='0' && name[i]<='9')
             {
-                //cout<<"CHISLO E"<<endl;
+                //cerr<<"CHISLO E"<<endl;
                 curr_num=0;
                 while (i<name.size() && name[i]>='0' && name[i]<='9')
                 {
@@ -1333,12 +1545,12 @@ struct compound
                     ++i;
                 }
                 nums.push_back(curr_num);
-                //cout<<"curr_num: "<<curr_num<<endl;
+                //cerr<<"curr_num: "<<curr_num<<endl;
                 was_last_num=1;
             }
             else
             {
-                //cout<<"BUKVA E"<<endl;
+                //cerr<<"BUKVA E"<<endl;
                 if (i<=name.size()-2)
                 {
                     //cerr<<"IMA POVECHE OT 2 BUKVI"<<endl;
@@ -1396,13 +1608,13 @@ struct compound
                     }
                     else if (name[i]=='a' || name[i]=='а')
                     {
-                        //cout<<"TVA E A"<<endl;
+                        //cerr<<"TVA E A"<<endl;
                         continue;
                     }
                     else
                     {
 
-                        //cout<<"Tva e korena"<<endl;
+                        //cerr<<"Tva e korena"<<endl;
                         curr="";
                         curr_num=0;
                         i2=i;
@@ -1531,6 +1743,7 @@ struct compound
         for (int i=0;i<hal_subs2.size();++i)
         {
             //cerr<<"Halogen substituent: "<<hal_subs2[i].first<<" "<<halogen_symbol[hal_subs2[i].second]<<endl;
+            //cerr<<been_up[hal_subs2[i].first-1]<<endl;
             pr=PC[hal_subs2[i].first-1];
             x2=-(parent_chain/2)*distx+(hal_subs2[i].first-1)*distx+x;
             y2=y;
@@ -1549,19 +1762,19 @@ struct compound
             }
             else
             {
-                if (i!=0 && i!=hal_subs2.size()-1) y2-=disty;
-                if (i==hal_subs2.size()-1) distx=-distx;
-                if (been_up[hal_subs2[i].first-1]==3)
+                if ((hal_subs2[i].first-1!=0 && hal_subs2[i].first-1!=parent_chain-1) || (parent_chain>1 && been_up[hal_subs2[i].first-1]==3)) y2-=disty;
+                if (hal_subs2[i].first-1==0) distx=-distx;
+                if (been_up[hal_subs2[i].first-1]>2)
                 {
                     distx=-distx;
-                    been_up[hal_subs2[i].first-1]=2;
+                    been_up[hal_subs2[i].first-1]=4;
                 }
                 x2+=distx;
                 curr_num=addAtom(halogen_symbol[hal_subs2[i].second],1,x2,y2);
                 connectAtoms(curr_num,pr);
-                if (i==hal_subs2.size()-1) distx=-distx;
-                if (been_up[get<0>(hal_subs2[i])-1]==3) distx=-distx;
-                else been_up[get<0>(hal_subs2[i])-1]=3;
+                if (hal_subs2[i].first-1==0) distx=-distx;
+                if (been_up[hal_subs2[i].first-1]>2) distx=-distx;
+                else been_up[hal_subs2[i].first-1]=3;
             }
 
         }
@@ -1693,7 +1906,7 @@ double drawSymbol1(char symbol, double x, double y, bool centered)
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
         drawPartEllipse(x,y,0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,360);
-        return x+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        return x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
     }
     if (symbol=='H')
     {
@@ -1945,7 +2158,7 @@ double drawSymbol(string symbol, double x, double y, bool centered)
         else nextpos=drawSymbol1(symbol[i],nextpos,y,0);
         //cerr<<" "<<nextpos<<endl;
     }
-    return nextpos+0.02;
+    return nextpos+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
 }
 double drawIndex(int index, double x, double y)
 {
@@ -2398,7 +2611,7 @@ void run(GLFWwindow* w)
         if (last==-1 && c.findAtom(mxpos,mypos)!=-1) continue;
         if (pressed==GLFW_MOUSE_BUTTON_LEFT || pressed==GLFW_MOUSE_BUTTON_MIDDLE)
         {
-            //cout<<"Connect: "<<last<<" "<<last2<<'\n'<<endl;
+            //cerr<<"Connect: "<<last<<" "<<last2<<'\n'<<endl;
             if (last2!=-1)
             {
                 c_old=c;
@@ -2489,7 +2702,7 @@ void setDictionaries()
 
     English.NC="Not Connected";
     English.help="Use the Middle Mouse Button to start or continue chains.\nUse the Left Mouse Button to end chains and to move atoms.";
-    English.help+="\nUse the Right mouse button to cancel the current action and remove atoms.\nHold down F,C,B or I in order to place a Fluorine, Chlorine, Bromine or Iodine\natom respectively.";
+    English.help+="\nUse the Right mouse button to cancel the current action and remove atoms.\nHold down O, F, C, B or I in order to place aн Oxygen, Fluorine, Chlorine,\nBromine or Iodine atom respectively.";
     English.help+="\nPress Backspace to undo.\nPress Shift to toggle snapping on and off.\nPress R to reset.\nPress L to change the language.";
     English.help+="\nPress N to enter a name of a compound.\nPress H for help.\nPress Escape to end the program.";
     English.PACTC="Press any key to continue.";
@@ -2507,12 +2720,12 @@ void setDictionaries()
     Bulgarian.HP["Br"]="бромо";
     Bulgarian.HP["I"]="йодо";
 
-    English.FGS["OH"]="ол";
-    English.FGP["OH"]="хидрокси";
+    Bulgarian.FGS["OH"]="ол";
+    Bulgarian.FGP["OH"]="хидрокси";
 
     Bulgarian.NC="Не са свързани";
     Bulgarian.help="Използвайте средния бутон на мишката, за да започнете или продължите вериги.\nИзползвайте левия бутон на мишката, за да завършите вериги\nили да местите атоми.";
-    Bulgarian.help+="\nИзплозвайте десния бутон на мишката, за да откажете текущото действие\nили да махнете атом.\nЗадръжте F,C,B или I, за да сложите флуорен, хлорен, бромен или йоден\nатом съответно.";
+    Bulgarian.help+="\nИзплозвайте десния бутон на мишката, за да откажете текущото действие\nили да махнете атом.\nЗадръжте O, F, C, B или I, за да сложите кислороден, флуорен, хлорен,\nбромен или йоден атом съответно.";
     Bulgarian.help+="\nНатиснете Backspace, за да върнете последното действие.\nНатиснете Shift, за да включите или изключите\nавтоматичното наместване на атомите.\nНатиснете R, за да рестартирате.";
     Bulgarian.help+="\nНатиснете L, за да смените езика.\nНатиснете H за инструкции.\nНатиснете N, за да въведете името на съединение.";
     Bulgarian.help+="\nНатиснете Escape, за да изключите програмата.";
@@ -2538,18 +2751,18 @@ int main()
 
     string message;
     message=initializeGLFW();
-    //cout<<message<<endl;
+    cerr<<message<<endl;
     if (message!="GLFW initialized successfully.") return -1;
 
     message=createWindow(window);
-    //cout<<message<<endl;
+    cerr<<message<<endl;
     if (message!="Window created successfully.") return -1;
 
     message=setCallbacks(window);
-    //cout<<message<<endl;
+    cerr<<message<<endl;
     if (message!="Callbacks set successfully.") return -1;
 
-    //system("cls");
+    system("cls");
     run(window);
 
     stopGraphics();
