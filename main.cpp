@@ -37,6 +37,7 @@ struct dictionary
     vector<string> SS; //substituent_suffix
     string CP; //cycle_prefix
     string NC; //not_connected
+    string error;
     string help;
     string PACTC; //Press any key to continue
     unordered_map<string, string> HP; //halogen_prefixes
@@ -62,6 +63,7 @@ struct dictionary
 vector<string> element_symbol={"H","C","O","F","Cl","Br","I"};
 vector<int> element_valence={1,4,2,1,1,1,1};
 vector<string> halogen_symbol={"F","Cl","Br","I"};
+unordered_map<string, int> substituent_priorities={{"alkyl",-1},{"halogen",-1},{"hydroxyl",1},{"attachment",100}};
 
 dictionary Bulgarian,English,curr_dict;
 vector<dictionary> dictionaries;
@@ -80,11 +82,11 @@ string onlyLetters(string a)
     //cerr<<"OL: "<<a<<" "<<a2<<endl;
     return a2;
 }
-bool cmpBySubName(pair<int, string> a, pair<int, string> b)
+bool cmpBySubName(tuple<int, string, bool> a, tuple<int, string, bool> b)
 {
     string a2,b2;
-    a2=onlyLetters(a.second);
-    b2=onlyLetters(b.second);
+    a2=onlyLetters(get<1>(a));
+    b2=onlyLetters(get<1>(b));
     return a2<b2;
 }
 
@@ -462,19 +464,27 @@ struct compound
         }
         return maxcon;
     }
-    pair<vector<int>, int> findFarthest(int s, int out)
+    pair<vector<int>, vector<int> > findFarthest(int s, int out)
     {
-        vector<int> maxDistAtoms;
-        pair<vector<int>, int> ans;
-        int maxDist=-1;
+        vector<int> max_dist_atoms;
+        pair<vector<int>, vector<int> > ans;
+        vector<int> max_dist;
         atom a;
-        stack<pair<int, int> > st;
+        stack<pair<int, vector<int> > > st;
         vector<bool> vis;
-        pair<int, int> curr;
+        pair<int, vector<int>> curr;
+        int f;
+        int priority;
         vis.resize(atoms.size());
         for (int i=0;i<vis.size();++i) vis[i]=0;
         curr.first=s;
-        curr.second=0;
+        curr.second.resize(5);
+        max_dist.resize(5);
+        for (int i=0;i<5;++i)
+        {
+            curr.second[i]=0;
+            max_dist[i]=0;
+        }
         st.push(curr);
         vis[s]=1;
         while (!st.empty())
@@ -482,18 +492,34 @@ struct compound
             curr=st.top();
             st.pop();
             a=atoms[curr.first];
-            curr.second+=atoms.size()*atoms.size();
-            if (a.isConnected(out)!=-1) curr.second+=atoms.size()*atoms.size()*atoms.size()*atoms.size();
-            for (int i=0;i<a.bonds.size();++i)
+            --curr.second[2];
+            priority=0;
+            if (a.isConnected(out)!=-1) priority=substituent_priorities["attachment"];
+            if (!priority)
             {
-                if (a.bonds[i].to!=-1 && atoms[a.bonds[i].to].symbol=="O" && !atoms[a.bonds[i].to].free_bonds.empty()) curr.second+=atoms.size()*atoms.size()*atoms.size();
+                for (int i=0;i<a.bonds.size();++i)
+                {
+                    if (a.bonds[i].to!=-1 && atoms[a.bonds[i].to].symbol=="O" && !atoms[a.bonds[i].to].free_bonds.empty()) priority=substituent_priorities["hydroxyl"];
+                }
             }
-            if (curr.second>maxDist)
+            priority=-priority;
+            if (priority<curr.second[0])
             {
-                maxDist=curr.second;
-                maxDistAtoms.resize(0);
+                curr.second[0]=priority;
+                curr.second[1]=0;
             }
-            if (curr.second==maxDist) maxDistAtoms.push_back(curr.first);
+            if (priority==curr.second[0])
+            {
+                --curr.second[1];
+            }
+            f=cmpVectors(curr.second,max_dist);
+            if (f==1)
+            {
+                f=0;
+                max_dist=curr.second;
+                max_dist_atoms.resize(0);
+            }
+            if (f==0) max_dist_atoms.push_back(curr.first);
             for (int i=0;i<a.bonds.size();++i)
             {
                 s=a.bonds[i].to;
@@ -503,11 +529,11 @@ struct compound
                     vis[s]=1;
                     if (a.bonds[i].spots_taken.size()>1)
                     {
-                        curr.second+=atoms.size();
-                        if (a.bonds[i].spots_taken.size()==2) ++curr.second;
+                        --curr.second[3];
+                        if (a.bonds[i].spots_taken.size()==2) --curr.second[4];
                         st.push(curr);
-                        curr.second-=atoms.size();
-                        if (a.bonds[i].spots_taken.size()==2) --curr.second;
+                        ++curr.second[3];
+                        if (a.bonds[i].spots_taken.size()==2) ++curr.second[4];
                     }
                     else
                     {
@@ -516,8 +542,8 @@ struct compound
                 }
             }
         }
-        ans.first=maxDistAtoms;
-        ans.second=maxDist;
+        ans.first=max_dist_atoms;
+        ans.second=max_dist;
         return ans;
     }
     vector<int> findPathFrom(int s, int out, bool cycle)
@@ -583,73 +609,147 @@ struct compound
         atom a;
         vector<pair<int, int> > comp_bonds;
         pair<int, int> comp_bond;
+        //cerr<<"PC & CB: ";
         for (int i=0;i<parent_chain.size();++i)
         {
+            //cerr<<" "<<parent_chain[i];
             a=atoms[parent_chain[i]];
             for (int j=0;j<a.bonds.size();++j)
             {
-                if (a.bonds[j].to==parent_chain[(i+1)%parent_chain.size()] && a.bonds[j].spots_taken.size()>1)
+                if (a.bonds[j].to==parent_chain[(i+1)%parent_chain.size()] && a.bonds[j].spots_taken.size()>1 && (i<parent_chain.size()-1 || parent_chain.size()>2))
                 {
+                    //cerr<<"X"<<a.bonds[j].spots_taken.size();
                     comp_bond.first=i+1;
                     comp_bond.second=a.bonds[j].spots_taken.size();
                     comp_bonds.push_back(comp_bond);
                 }
             }
         }
+        //cerr<<endl;
         return comp_bonds;
     }
-    vector<pair<int, string> > findSubstituents(vector<int> parent_chain, int out, bool wantNames)
+    int findHighestPriority(vector<int> parent_chain, int out)
     {
         atom a;
-        vector<pair<int, string> > subs;
-        pair<int, string> sub;
+        int max_priority=0;
+        int curr_p;
         int PCS=parent_chain.size();
         for (int i=0;i<PCS;++i)
         {
             a=atoms[parent_chain[i]];
             for (int j=0;j<a.bonds.size();++j)
             {
-                if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[(i-1+PCS)%PCS] && a.bonds[j].to!=parent_chain[(i+1)%PCS] && a.bonds[j].to!=out)
+                if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[(i-1+PCS)%PCS] && a.bonds[j].to!=parent_chain[(i+1)%PCS])
                 {
-                    if (atoms[a.bonds[j].to].symbol=="C")
+                    if (a.bonds[j].to==out)
                     {
-                        sub.first=i+1;
-                        if (wantNames) sub.second=generateName(a.bonds[j].to,parent_chain[i]);
-                        else sub.second="";
-                        subs.push_back(sub);
+                        curr_p=substituent_priorities["attachment"];
+                        if (curr_p>max_priority) max_priority=curr_p;
                     }
-                    else if (atoms[a.bonds[j].to].symbol!="C" && atoms[a.bonds[j].to].symbol!="O")
+                    else if (atoms[a.bonds[j].to].symbol=="O" && atoms[a.bonds[j].to].free_bonds.size()>0)
                     {
-                        sub.first=i+1;
-                        if (wantNames) sub.second=curr_dict.HP[atoms[a.bonds[j].to].symbol];
-                        else sub.second="";
-                        subs.push_back(sub);
+                        curr_p=substituent_priorities["hydroxyl"];
+                        if (curr_p>max_priority) max_priority=curr_p;
+                    }
+                    else if (atoms[a.bonds[j].to].symbol=="F" || atoms[a.bonds[j].to].symbol=="Cl" || atoms[a.bonds[j].to].symbol=="Br" || atoms[a.bonds[j].to].symbol=="I")
+                    {
+                        curr_p=substituent_priorities["halogen"];
+                        if (curr_p>max_priority) max_priority=curr_p;
+                    }
+                    else if (atoms[a.bonds[j].to].symbol=="C")
+                    {
+                        curr_p=substituent_priorities["alkyl"];
+                        if (curr_p>max_priority) max_priority=curr_p;
+                    }
+                }
+            }
+        }
+        return max_priority;
+    }
+    vector<tuple<int, string, bool> > findSubstituents(vector<int> parent_chain, int out, bool prefix, bool want_names)
+    {
+        atom a;
+        vector<tuple<int, string, bool> > subs;
+        tuple<int, string, bool> sub;
+        int PCS=parent_chain.size();
+        int max_priority=findHighestPriority(parent_chain,out);
+        int curr_p;
+        for (int i=0;i<PCS;++i)
+        {
+            a=atoms[parent_chain[i]];
+            for (int j=0;j<a.bonds.size();++j)
+            {
+                if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[(i-1+PCS)%PCS] && a.bonds[j].to!=parent_chain[(i+1)%PCS])
+                {
+                    if (a.bonds[j].to==out)
+                    {
+                        curr_p=substituent_priorities["attachment"];
+                        if ((prefix && curr_p<max_priority) || (!prefix && curr_p>=max_priority))
+                        {
+                            get<0>(sub)=i+1;
+                            if (want_names)
+                            {
+                                if (prefix) get<1>(sub)=curr_dict.error;
+                                else get<1>(sub)=curr_dict.SS[a.bonds[j].spots_taken.size()];
+                            }
+                            else get<1>(sub)="";
+                            get<2>(sub)=0;
+                            subs.push_back(sub);
+                        }
+                    }
+                    else if (atoms[a.bonds[j].to].symbol=="O" && atoms[a.bonds[j].to].free_bonds.size()>0)
+                    {
+                        curr_p=substituent_priorities["hydroxyl"];
+                        if ((prefix && curr_p<max_priority) || (!prefix && curr_p>=max_priority))
+                        {
+                            get<0>(sub)=i+1;
+                            if (want_names)
+                            {
+                                if (prefix) get<1>(sub)=curr_dict.FGP["OH"];
+                                else get<1>(sub)=curr_dict.FGS["OH"];
+                            }
+                            else get<1>(sub)="";
+                            get<2>(sub)=0;
+                            subs.push_back(sub);
+                        }
+                    }
+                    else if (atoms[a.bonds[j].to].symbol=="F" || atoms[a.bonds[j].to].symbol=="Cl" || atoms[a.bonds[j].to].symbol=="Br" || atoms[a.bonds[j].to].symbol=="I")
+                    {
+                        curr_p=substituent_priorities["halogen"];
+                        if ((prefix && curr_p<max_priority) || (!prefix && curr_p>=max_priority))
+                        {
+                            get<0>(sub)=i+1;
+                            if (want_names)
+                            {
+                                if (prefix) get<1>(sub)=curr_dict.HP[atoms[a.bonds[j].to].symbol];
+                                else get<1>(sub)=curr_dict.error;
+                            }
+                            else get<1>(sub)="";
+                            get<2>(sub)=0;
+                            subs.push_back(sub);
+                        }
+                    }
+                    else if (atoms[a.bonds[j].to].symbol=="C")
+                    {
+                        curr_p=substituent_priorities["alkyl"];
+
+                        if ((prefix && curr_p<max_priority) || (!prefix && curr_p>=max_priority))
+                        {
+                            get<0>(sub)=i+1;
+                            if (want_names)
+                            {
+                                if (prefix) get<1>(sub)=generateName(a.bonds[j].to,parent_chain[i]);
+                                else get<1>(sub)=curr_dict.error;
+                            }
+                            else get<1>(sub)="";
+                            get<2>(sub)=1;
+                            subs.push_back(sub);
+                        }
                     }
                 }
             }
         }
         return subs;
-    }
-    vector<int> findOHGroups(vector<int> parent_chain, int out)
-    {
-        atom a;
-        vector<int> OHs;
-        int PCS=parent_chain.size();
-        for (int i=0;i<PCS;++i)
-        {
-            a=atoms[parent_chain[i]];
-            for (int j=0;j<a.bonds.size();++j)
-            {
-                if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[(i-1+PCS)%PCS] && a.bonds[j].to!=parent_chain[(i+1)%PCS] && a.bonds[j].to!=out)
-                {
-                    if (atoms[a.bonds[j].to].symbol=="O")
-                    {
-                        OHs.push_back(i+1);
-                    }
-                }
-            }
-        }
-        return OHs;
     }
     bool isParentChainCyclic(vector<int> parent_chain)
     {
@@ -659,191 +759,186 @@ struct compound
         if (a.isConnected(parent_chain[0])==-1) return 0;
         return 1;
     }
-    string findSP(vector<int> pos, string name) //find substituents_prefix
+    string findGN(vector<int> pos, string name, bool carbon, int parent_chain_length, bool cyclic, bool most_important) //find group's name
     {
         string prefix="";
-        for (int i=0;i<pos.size();++i)
+        bool show_locants=1;
+        if (pos.size()==1 && pos[0]==1)
         {
-            if (i>0) prefix+=',';
-            prefix+=intToString(pos[i]);
+            for (int i=1;i<=3;++i)
+            {
+                if (name==curr_dict.SS[i])
+                {
+                    show_locants=0;
+                    break;
+                }
+            }
         }
-        prefix+='-';
+        if (parent_chain_length==1)
+        {
+            show_locants=0;
+        }
+        if (most_important && pos.size()==1 && (cyclic || parent_chain_length<3))
+        {
+            show_locants=0;
+        }
+        if ((!cyclic && pos.size()==parent_chain_length-1) || pos.size()==parent_chain_length || (most_important && pos.size()==1 && parent_chain_length==3))
+        {
+            for (int i=2;i<=3;++i)
+            {
+                if (name==curr_dict.CBI[i])
+                {
+                    show_locants=0;
+                    break;
+                }
+            }
+        }
+        if (parent_chain_length<4 && carbon)
+        {
+            show_locants=0;
+        }
+        if (show_locants)
+        {
+            for (int i=0;i<pos.size();++i)
+            {
+                if (i>0) prefix+=',';
+                prefix+=intToString(pos[i]);
+            }
+            prefix+='-';
+        }
         if (pos.size()>1) prefix+=curr_dict.getNP(pos.size());
         prefix+=name;
         return prefix;
     }
-    string findSPs(vector<pair<int, string> > subs)//find substituents_prefixes
+    string findGNs(vector<tuple<int, string, bool> > subs, int parent_chain_length, bool cyclic, bool most_important)//find groups' names
     {
         string prefixes="";
-        vector<int> currPos;
+        vector<int> curr_pos;
         if (subs.size()==0) return prefixes;
-
-        /*cerr<<"Before sort: "<<endl;
-        for (int i=0;i<subs.size();++i)
-        {
-            cerr<<subs[i].first<<" "<<subs[i].second<<endl;
-        }*/
-
         sort(subs.begin(),subs.end(),cmpBySubName);
-
-        /*cerr<<"After sort: "<<endl;
+        string curr=get<1>(subs[0]);
+        bool curr_carbon=get<2>(subs[0]);
         for (int i=0;i<subs.size();++i)
         {
-            cerr<<subs[i].first<<" "<<subs[i].second<<endl;
-        }*/
-
-        string curr=subs[0].second;
-        for (int i=0;i<subs.size();++i)
-        {
-            if (subs[i].second!=curr)
+            if (get<1>(subs[i])!=curr)
             {
-                prefixes+=findSP(currPos,curr);
+                most_important=0;
+                prefixes+=findGN(curr_pos,curr,curr_carbon,parent_chain_length,cyclic,most_important);
                 prefixes+='-';
-                currPos.resize(0);
-                curr=subs[i].second;
+                curr_pos.resize(0);
+                curr_carbon=get<2>(subs[i]);
+                curr=get<1>(subs[i]);
             }
-            currPos.push_back(subs[i].first);
+            curr_pos.push_back(get<0>(subs[i]));
         }
-        prefixes+=findSP(currPos,curr);
+        prefixes+=findGN(curr_pos,curr,curr_carbon,parent_chain_length,cyclic,most_important);
         return prefixes;
+    }
+    int cmpVectors(vector<int> a, vector<int> b)
+    {
+        if (a.size()>b.size()) return 1;
+        if (a.size()<b.size()) return -1;
+        for (int i=0;i<a.size();++i)
+        {
+            if (a[i]<b[i])
+            {
+                return 1;
+            }
+            if (a[i]>b[i])
+            {
+                return -1;
+            }
+        }
+        return 0;
+    }
+    vector<int> convertVector (vector<tuple<int, string, bool> > a)
+    {
+        vector<int> ans(a.size());
+        for (int i=0;i<a.size();++i)
+        {
+            ans[i]=get<0>(a[i]);
+        }
+        return ans;
+    }
+    vector<int> convertVector (vector<pair<int,int> > a)
+    {
+        vector<int> ans(a.size());
+        for (int i=0;i<a.size();++i)
+        {
+            ans[i]=a[i].first;
+        }
+        return ans;
     }
     vector<int> directAcyclicParentChain(vector<int> parent_chain, int out)
     {
-        atom a;
         vector<int> parent_chain2;
-        pair<int, int> attachment1;
-        pair<int, int> attachment2;
-        vector<int> OHs1;
-        vector<int> OHs2;
         vector<pair<int, int> > complex_bonds1;
         vector<pair<int, int> > complex_bonds2;
-        vector<int> double_bonds1;
-        vector<int> double_bonds2;
-        vector<pair<int, string> > subs1;
-        vector<pair<int, string> > subs2;
+        vector<tuple<int, string, bool> > subs1;
+        vector<tuple<int, string, bool> > subs2;
+        vector<int> a1,a2;
+        int f;
         parent_chain2.resize(parent_chain.size());
-        //cerr<<"PC: ";
         for (int i=0;i<parent_chain.size();++i)
         {
-            //cerr<<parent_chain[i]<<" ";
             parent_chain2[parent_chain.size()-1-i]=parent_chain[i];
         }
-        //cerr<<endl;
-        attachment1=findAttachment(parent_chain,out);
-        attachment2=findAttachment(parent_chain2,out);
-        if (attachment1.first<attachment2.first)
-        {
-            return parent_chain;
-        }
-        if (attachment1.first>attachment2.first)
-        {
-            return parent_chain2;
-        }
-        //cerr<<"PAST ATTACHMENTS"<<endl;
-        OHs1=findOHGroups(parent_chain,out);
-        OHs2=findOHGroups(parent_chain2,out);
-        for (int i=0;i<OHs1.size();++i)
-        {
-            if (OHs1[i]<OHs2[i])
-            {
-                return parent_chain;
-            }
-            if (OHs1[i]>OHs2[i])
-            {
-                return parent_chain2;
-            }
-        }
-        //cerr<<"PAST HYDROXYLS"<<endl;
+
+        subs1=findSubstituents(parent_chain,out,0,0);
+        subs2=findSubstituents(parent_chain2,out,0,0);
+        a1=convertVector(subs1);
+        a2=convertVector(subs2);
+        f=cmpVectors(a1,a2);
+        if (f==1) return parent_chain;
+        if (f==-1) return parent_chain2;
+
         complex_bonds1=findComplexBonds(parent_chain);
         complex_bonds2=findComplexBonds(parent_chain2);
+        a1=convertVector(complex_bonds1);
+        a2=convertVector(complex_bonds2);
+        f=cmpVectors(a1,a2);
+        if (f==1) return parent_chain;
+        if (f==-1) return parent_chain2;
+
         for (int i=0;i<complex_bonds1.size();++i)
         {
-            if (complex_bonds1[i].first<complex_bonds2[i].first)
-            {
-                return parent_chain;
-            }
-            if (complex_bonds1[i].first>complex_bonds2[i].first)
-            {
-                return parent_chain2;
-            }
-        }
-        //cerr<<"PAST COMPLEX"<<endl;
-        for (int i=0;i<complex_bonds1.size();++i)
-        {
-            if (complex_bonds1[i].second==2) double_bonds1.push_back(complex_bonds1[i].first);
+            if (complex_bonds1[i].second==2) a1.push_back(complex_bonds1[i].first);
         }
         for (int i=0;i<complex_bonds2.size();++i)
         {
-            if (complex_bonds2[i].second==2) double_bonds2.push_back(complex_bonds2[i].first);
+            if (complex_bonds2[i].second==2) a2.push_back(complex_bonds2[i].first);
         }
-        for (int i=0;i<double_bonds1.size();++i)
-        {
-            if (double_bonds1[i]<double_bonds2[i])
-            {
-                return parent_chain;
-            }
-            if (double_bonds1[i]>double_bonds2[i])
-            {
-                return parent_chain2;
-            }
-        }
-        //cerr<<"PAST DOUBLE"<<endl;
-        subs1=findSubstituents(parent_chain,out,0);
-        subs2=findSubstituents(parent_chain2,out,0);
-        //cerr<<subs1.size()<<" "<<subs2.size()<<endl;
-        for (int i=0;i<subs1.size();++i)
-        {
-            //cerr<<"SUB1: "<<i<<" "<<subs1[i].first<<" "<<subs2[i].first<<endl;
-            if (subs1[i].first<subs2[i].first)
-            {
-                return parent_chain;
-            }
-            if (subs1[i].first>subs2[i].first)
-            {
-                return parent_chain2;
-            }
-        }
-        subs1=findSubstituents(parent_chain,out,1);
+        f=cmpVectors(a1,a2);
+        if (f==1) return parent_chain;
+        if (f==-1) return parent_chain2;
+
+        subs1=findSubstituents(parent_chain,out,1,0);
+        subs2=findSubstituents(parent_chain2,out,1,0);
+        a1=convertVector(subs1);
+        a2=convertVector(subs2);
+        f=cmpVectors(a1,a2);
+        if (f==1) return parent_chain;
+        if (f==-1) return parent_chain2;
+
+        subs1=findSubstituents(parent_chain,out,1,1);
+        subs2=findSubstituents(parent_chain2,out,1,1);
         sort(subs1.begin(),subs1.end(),cmpBySubName);
-        subs2=findSubstituents(parent_chain2,out,1);
         sort(subs2.begin(),subs2.end(),cmpBySubName);
-        //cerr<<subs1.size()<<" "<<subs2.size()<<endl;
-        for (int i=0;i<subs1.size();++i)
-        {
-            //cerr<<"SUB2: "<<i<<" "<<subs1[i].first<<" "<<subs2[i].first<<endl;
-            if (subs1[i].first<subs2[i].first)
-            {
-                return parent_chain;
-            }
-            if (subs1[i].first>subs2[i].first)
-            {
-                return parent_chain2;
-            }
-        }
+        a1=convertVector(subs1);
+        a2=convertVector(subs2);
+        f=cmpVectors(a1,a2);
+        if (f==1) return parent_chain;
+        if (f==-1) return parent_chain2;
         return parent_chain;
     }
     vector<int> directCyclicParentChain(vector<int> parent_chain, int out)
     {
-        atom a;
         vector<vector<int> > parent_chains;
         vector<vector<int> > parent_chains2;
-        pair<int, int> attachment;
-        pair<int, int> max_attachment;
-        vector<int> OHs;
-        vector<int> max_OHs;
         vector<pair<int, int> > complex_bonds;
-        vector<pair<int, int> > max_complex_bonds;
-        vector<int> double_bonds;
-        vector<int> max_double_bonds;
-        vector<pair<int, string> > subs;
-        vector<pair<int, string> > max_subs;
+        vector<tuple<int, string, bool> > subs;
+        vector<int> maxx,a1;
         int f;
-
-        max_subs.resize(0);
-        max_complex_bonds.resize(0);
-        max_double_bonds.resize(0);
-        max_attachment=make_pair(0,0);
-
 
         int PCS=parent_chain.size();
         parent_chains.resize(PCS*2);
@@ -862,224 +957,113 @@ struct compound
                 parent_chains[i*2+1][j]=parent_chains[i*2-1][j-1];
             }
         }
-        //cerr<<endl;
-        //cerr<<"AFTER GENERATION: "<<parent_chains.size()<<endl;
 
         parent_chains2.resize(0);
+        maxx.resize(0);
         for (int i=0;i<parent_chains.size();++i)
         {
             parent_chain=parent_chains[i];
-            attachment=findAttachment(parent_chain,out);
-            f=0;
-            if (attachment.first!=0 && (max_attachment.first==0 || attachment.first<max_attachment.first))
-            {
-                f=1;
-            }
-            else if (max_attachment.first!=0 && (attachment.first>max_attachment.first))
-            {
-                f=-1;
-            }
+            subs=findSubstituents(parent_chain,out,0,0);
+            a1=convertVector(subs);
+            f=cmpVectors(a1,maxx);
             if (f==1)
             {
                 f=0;
                 parent_chains2.resize(0);
-                max_attachment=attachment;
+                maxx=a1;
             }
             if (f==0)
             {
                 parent_chains2.push_back(parent_chain);
             }
         }
-        //cerr<<"AFTER ATTACHMENT: "<<parent_chains2.size()<<endl;
 
         parent_chains.resize(0);
+        maxx.resize(0);
         for (int i=0;i<parent_chains2.size();++i)
         {
             parent_chain=parent_chains2[i];
-            OHs=findOHGroups(parent_chain,out);
-            f=0;
-            if (max_OHs.empty() && !OHs.empty()) f=1;
-            else
-            {
-                for (int i=0;i<OHs.size();++i)
-                {
-                    if (OHs[i]<max_OHs[i])
-                    {
-                        f=1;
-                        break;
-                    }
-                    if (OHs[i]>max_OHs[i])
-                    {
-                        f=-1;
-                        break;
-                    }
-                }
-            }
+            complex_bonds=findComplexBonds(parent_chain);
+            a1=convertVector(complex_bonds);
+            f=cmpVectors(a1,maxx);
             if (f==1)
             {
                 f=0;
                 parent_chains.resize(0);
-                max_OHs=OHs;
+                maxx=a1;
             }
             if (f==0)
             {
                 parent_chains.push_back(parent_chain);
             }
         }
-        //cerr<<"AFTER OH GROUPS: "<<parent_chains.size()<<endl;
 
         parent_chains2.resize(0);
+        maxx.resize(0);
         for (int i=0;i<parent_chains.size();++i)
         {
             parent_chain=parent_chains[i];
             complex_bonds=findComplexBonds(parent_chain);
-            f=0;
-            if (max_complex_bonds.empty() && !complex_bonds.empty()) f=1;
-            else
-            {
-                for (int i=0;i<complex_bonds.size();++i)
-                {
-                    if (complex_bonds[i].first<max_complex_bonds[i].first)
-                    {
-                        f=1;
-                        break;
-                    }
-                    if (complex_bonds[i].first>max_complex_bonds[i].first)
-                    {
-                        f=-1;
-                        break;
-                    }
-                }
-            }
-            if (f==1)
-            {
-                f=0;
-                parent_chains2.resize(0);
-                max_complex_bonds=complex_bonds;
-            }
-            if (f==0)
-            {
-                parent_chains2.push_back(parent_chain);
-            }
-        }
-        //cerr<<"AFTER COMPLEX BONDS: "<<parent_chains2.size()<<endl;
-
-        parent_chains.resize(0);
-        for (int i=0;i<parent_chains2.size();++i)
-        {
-            parent_chain=parent_chains2[i];
-            complex_bonds=findComplexBonds(parent_chain);
-            double_bonds.resize(0);
+            a1.resize(0);
             for (int i=0;i<complex_bonds.size();++i)
             {
-                if (complex_bonds[i].second==2) double_bonds.push_back(complex_bonds[i].first);
+                if (complex_bonds[i].second==2) a1.push_back(complex_bonds[i].first);
             }
-            f=0;
-            if (max_double_bonds.empty() && !double_bonds.empty()) f=1;
-            else
-            {
-                for (int i=0;i<double_bonds.size();++i)
-                {
-                    if (double_bonds[i]<max_double_bonds[i])
-                    {
-                        f=1;
-                        break;
-                    }
-                    if (double_bonds[i]>max_double_bonds[i])
-                    {
-                        f=-1;
-                        break;
-                    }
-                }
-            }
-            if (f==1)
-            {
-                f=0;
-                parent_chains.resize(0);
-                max_double_bonds=double_bonds;
-            }
-            if (f==0)
-            {
-                parent_chains.push_back(parent_chain);
-            }
-        }
-        //cerr<<"AFTER DOUBLE BONDS: "<<parent_chains.size()<<endl;
-
-        parent_chains2.resize(0);
-        for (int i=0;i<parent_chains.size();++i)
-        {
-            parent_chain=parent_chains[i];
-            subs=findSubstituents(parent_chain,out,0);
-            f=0;
-            if (max_subs.empty() && !subs.empty()) f=1;
-            else
-            {
-                for (int i=0;i<subs.size();++i)
-                {
-                    if (subs[i].first<max_subs[i].first)
-                    {
-                        f=1;
-                        break;
-                    }
-                    if (subs[i].first>max_subs[i].first)
-                    {
-                        f=-1;
-                        break;
-                    }
-                }
-            }
+            f=cmpVectors(a1,maxx);
             if (f==1)
             {
                 f=0;
                 parent_chains2.resize(0);
-                max_subs=subs;
+                maxx=a1;
             }
             if (f==0)
             {
                 parent_chains2.push_back(parent_chain);
             }
         }
-        //cerr<<"AFTER SUBS: "<<parent_chains2.size()<<endl;
 
         parent_chains.resize(0);
-        max_subs.resize(0);
+        maxx.resize(0);
         for (int i=0;i<parent_chains2.size();++i)
         {
             parent_chain=parent_chains2[i];
-            subs=findSubstituents(parent_chain,out,1);
-            sort(subs.begin(),subs.end(),cmpBySubName);
-            f=0;
-            if (max_subs.empty() && !subs.empty()) f=1;
-            else
-            {
-                for (int i=0;i<subs.size();++i)
-                {
-                    if (subs[i].first<max_subs[i].first)
-                    {
-                        f=1;
-                        break;
-                    }
-                    if (subs[i].first>max_subs[i].first)
-                    {
-                        f=-1;
-                        break;
-                    }
-                }
-            }
+            subs=findSubstituents(parent_chain,out,1,0);
+            a1=convertVector(subs);
+            f=cmpVectors(a1,maxx);
             if (f==1)
             {
                 f=0;
                 parent_chains.resize(0);
-                max_subs=subs;
+                maxx=a1;
             }
             if (f==0)
             {
                 parent_chains.push_back(parent_chain);
             }
         }
-        //cerr<<"AFTER SORTED SUBS: "<<parent_chains.size()<<endl;
 
-        parent_chain=parent_chains[0];
+        parent_chains2.resize(0);
+        maxx.resize(0);
+        for (int i=0;i<parent_chains.size();++i)
+        {
+            parent_chain=parent_chains[i];
+            subs=findSubstituents(parent_chain,out,1,0);
+            sort(subs.begin(),subs.end(),cmpBySubName);
+            a1=convertVector(subs);
+            f=cmpVectors(a1,maxx);
+            if (f==1)
+            {
+                f=0;
+                parent_chains2.resize(0);
+                maxx=a1;
+            }
+            if (f==0)
+            {
+                parent_chains2.push_back(parent_chain);
+            }
+        }
+
+        parent_chain=parent_chains2[0];
         return parent_chain;
     }
     vector<int> directParentChain(vector<int> parent_chain, int out)
@@ -1093,26 +1077,27 @@ struct compound
     }
     vector<int> findParentChain(int in, int out)
     {
-        atom a;
-        pair<vector<int>, int> candidates,candidates2;
+        pair<vector<int>, vector<int>> candidates,candidates2;
         vector<pair<int, int> > finalCandidates;
         pair<int, int> currCandidate;
         vector<int> parent_chain={0};
         vector<int> prev;
         vector<vector<int> > candidateParentChains;
         vector<vector<int> > candidateParentChains2;
-        vector<pair<int, string> > subs;
-        vector<pair<int, string> > max_subs;
+        vector<tuple<int, string, bool> > subs;
         vector<pair<int, int> > complex_bonds;
-        vector<pair<int, int> > max_complex_bonds;
         vector<int> double_bonds;
         vector<int> max_double_bonds;
-        pair<int, int> attachment;
-        pair<int, int> max_attachment={0,0};
-        int maxSideChains=-1;
+        vector<int> maxx;
+        vector<int> a1;
         int curr;
         int f;
-        int maxDist=-1;
+        vector<int> maxDist;
+        maxDist.resize(5);
+        for (int i=0;i<5;++i)
+        {
+            maxDist[i]=0;
+        }
         int starting_atom;
         starting_atom=findAtomInCycle(in,out);
         if (starting_atom==-1)
@@ -1136,12 +1121,14 @@ struct compound
             for (int i=0;i<candidates.first.size();++i)
             {
                 candidates2=findFarthest(candidates.first[i],out);
-                if (candidates2.second>maxDist)
+                f=cmpVectors(candidates2.second,maxDist);
+                if (f==1)
                 {
+                    f=0;
                     maxDist=candidates2.second;
                     finalCandidates.resize(0);
                 }
-                if (candidates2.second==maxDist)
+                if (f==0)
                 {
                     currCandidate.first=candidates.first[i];
                     for (int j=0;j<candidates2.first.size();++j)
@@ -1176,181 +1163,111 @@ struct compound
                     candidateParentChains2.push_back(directParentChain(parent_chain,out));
                 }
             }
-            //cerr<<"PRE ATTACHMENT LOCANTS: "<<candidateParentChains2.size()<<endl;
+
             candidateParentChains.resize(0);
+            maxx.resize(0);
             for (int i=0;i<candidateParentChains2.size();++i)
             {
                 parent_chain=candidateParentChains2[i];
-                attachment=findAttachment(parent_chain,out);
-                f=0;
-                if (attachment.first!=0 && (max_attachment.first==0 || attachment.first<max_attachment.first))
-                {
-                    f=1;
-                }
-                else if (max_attachment.first!=0 && (attachment.first>max_attachment.first))
-                {
-                    f=-1;
-                }
+                subs=findSubstituents(parent_chain,out,0,0);
+                a1=convertVector(subs);
+                f=cmpVectors(a1,maxx);
                 if (f==1)
                 {
                     f=0;
                     candidateParentChains.resize(0);
-                    max_attachment=attachment;
+                    maxx=a1;
                 }
                 if (f==0)
                 {
                     candidateParentChains.push_back(parent_chain);
                 }
             }
-            //cerr<<"PRE COMPLEX BOND LOCANTS: "<<candidateParentChains.size()<<endl;
+
             candidateParentChains2.resize(0);
+            maxx.resize(0);
             for (int i=0;i<candidateParentChains.size();++i)
             {
                 parent_chain=candidateParentChains[i];
                 complex_bonds=findComplexBonds(parent_chain);
-                f=0;
-                if (max_complex_bonds.empty() && !complex_bonds.empty()) f=1;
-                else
-                {
-                    for (int i=0;i<complex_bonds.size();++i)
-                    {
-                        if (complex_bonds[i].first<max_complex_bonds[i].first)
-                        {
-                            f=1;
-                            break;
-                        }
-                        if (complex_bonds[i].first>max_complex_bonds[i].first)
-                        {
-                            f=-1;
-                            break;
-                        }
-                    }
-                }
+                a1=convertVector(subs);
+                f=cmpVectors(a1,maxx);
                 if (f==1)
                 {
                     f=0;
                     candidateParentChains2.resize(0);
-                    max_complex_bonds=complex_bonds;
+                    maxx=a1;
                 }
                 if (f==0)
                 {
                     candidateParentChains2.push_back(parent_chain);
                 }
             }
-            //cerr<<"PRE DOUBLE BOND LOCANTS: "<<candidateParentChains2.size()<<endl;
+
             candidateParentChains.resize(0);
+            maxx.resize(0);
             for (int i=0;i<candidateParentChains2.size();++i)
             {
                 parent_chain=candidateParentChains2[i];
                 complex_bonds=findComplexBonds(parent_chain);
-                double_bonds.resize(0);
+                a1.resize(0);
                 for (int i=0;i<complex_bonds.size();++i)
                 {
-                    if (complex_bonds[i].second==2) double_bonds.push_back(complex_bonds[i].first);
+                    if (complex_bonds[i].second==2) a1.push_back(complex_bonds[i].first);
                 }
-                f=0;
-                if (max_double_bonds.empty() && !double_bonds.empty()) f=1;
-                else
-                {
-                    for (int i=0;i<double_bonds.size();++i)
-                    {
-                        if (double_bonds[i]<max_double_bonds[i])
-                        {
-                            f=1;
-                            break;
-                        }
-                        if (double_bonds[i]>max_double_bonds[i])
-                        {
-                            f=-1;
-                            break;
-                        }
-                    }
-                }
+                f=cmpVectors(a1,maxx);
                 if (f==1)
                 {
                     f=0;
                     candidateParentChains.resize(0);
-                    max_double_bonds=double_bonds;
+                    maxx=a1;
                 }
                 if (f==0)
                 {
                     candidateParentChains.push_back(parent_chain);
                 }
             }
-            //cerr<<"PRE SUB NUMBERS AND LOCANTS: "<<candidateParentChains.size()<<endl;
+
             candidateParentChains2.resize(0);
+            maxx.resize(0);
             for (int i=0;i<candidateParentChains.size();++i)
             {
                 parent_chain=candidateParentChains[i];
-                subs=findSubstituents(parent_chain,out,0);
-                f=0;
-                if (subs.size()>max_subs.size()) f=1;
-                else if (subs.size()<max_subs.size()) f=-1;
-                else
-                {
-                    for (int i=0;i<subs.size();++i)
-                    {
-                        if (subs[i].first<max_subs[i].first)
-                        {
-                            f=1;
-                            break;
-                        }
-                        if (subs[i].first>max_subs[i].first)
-                        {
-                            f=-1;
-                            break;
-                        }
-                    }
-                }
+                subs=findSubstituents(parent_chain,out,1,0);
+                a1=convertVector(subs);
+                f=cmpVectors(a1,maxx);
                 if (f==1)
                 {
                     f=0;
                     candidateParentChains2.resize(0);
-                    max_subs=subs;
+                    maxx=a1;
                 }
                 if (f==0)
                 {
                     candidateParentChains2.push_back(parent_chain);
                 }
             }
-            //cerr<<"PRE SORTED SUBS LOCANTS: "<<candidateParentChains2.size()<<endl;
+
             candidateParentChains.resize(0);
-            max_subs.resize(0);
+            maxx.resize(0);
             for (int i=0;i<candidateParentChains2.size();++i)
             {
                 parent_chain=candidateParentChains2[i];
-                subs=findSubstituents(parent_chain,out,1);
+                subs=findSubstituents(parent_chain,out,1,1);
                 sort(subs.begin(),subs.end(),cmpBySubName);
-                f=0;
-                if (max_subs.empty() && !subs.empty()) f=1;
-                else
-                {
-                    for (int i=0;i<subs.size();++i)
-                    {
-                        if (subs[i].first<max_subs[i].first)
-                        {
-                            f=1;
-                            break;
-                        }
-                        if (subs[i].first>max_subs[i].first)
-                        {
-                            f=-1;
-                            break;
-                        }
-                    }
-                }
+                a1=convertVector(subs);
+                f=cmpVectors(a1,maxx);
                 if (f==1)
                 {
                     f=0;
                     candidateParentChains.resize(0);
-                    max_subs=subs;
+                    maxx=a1;
                 }
                 if (f==0)
                 {
                     candidateParentChains.push_back(parent_chain);
                 }
             }
-            //cerr<<"PRE CHOICE: "<<candidateParentChains.size()<<endl;
             parent_chain=candidateParentChains[0];
         }
         else
@@ -1379,113 +1296,76 @@ struct compound
         vector<string> suffixes;
         string suffix;
         vector<int> parent_chain;
-        pair<int, int> attachment;
-        vector<int> OHs;
         vector<pair<int, int> > complex_bonds;
         vector<int> double_bonds;
         vector<int> triple_bonds;
-        vector<pair<int, string> > subs;
+        vector<tuple<int, string, bool> > prefix_subs;
+        vector<tuple<int, string, bool> > suffix_subs;
+        bool cyclic;
+        bool most_important;
         parent_chain=findParentChain(in,out);
         parent_chain=directParentChain(parent_chain,out);
-        subs=findSubstituents(parent_chain,out,1);
-        name=findSPs(subs);
+        prefix_subs=findSubstituents(parent_chain,out,1,1);
+        suffix_subs=findSubstituents(parent_chain,out,0,1);
         complex_bonds=findComplexBonds(parent_chain);
-        OHs=findOHGroups(parent_chain,out);
+        cyclic=isParentChainCyclic(parent_chain);
         for (int i=0;i<complex_bonds.size();++i)
         {
+            //cerr<<"CB: "<<complex_bonds[i].first<<" "<<complex_bonds[i].second<<endl;
             if (complex_bonds[i].second==2) double_bonds.push_back(complex_bonds[i].first);
             else if (complex_bonds[i].second==3) triple_bonds.push_back(complex_bonds[i].first);
         }
+
+        most_important=0;
+        if (suffix_subs.empty() && (complex_bonds.empty() || complex_bonds.size()==parent_chain.size() || (!cyclic && complex_bonds.size()==parent_chain.size()-1))) most_important=1;
+        name=findGNs(prefix_subs,parent_chain.size(),cyclic,most_important);
+
         if (!double_bonds.empty())
         {
-            suffix="";
-            if (parent_chain.size()>2)
-            {
-                suffix+='-';
-                for(int i=0;i<double_bonds.size();++i)
-                {
-                    if (i) suffix+=',';
-                    suffix+=intToString(double_bonds[i]);
-                }
-                suffix+='-';
-            }
-            if (double_bonds.size()>1) suffix+=curr_dict.getNP(double_bonds.size());
-            suffix+=curr_dict.CBI[2];
+            most_important=0;
+            if (suffix_subs.empty() && triple_bonds.empty()) most_important=1;
+            suffix=findGN(double_bonds,curr_dict.CBI[2],0,parent_chain.size(),cyclic,most_important);
             suffixes.push_back(suffix);
         }
+
         if (!triple_bonds.empty())
         {
-            suffix="";
-            if (parent_chain.size()>2)
-            {
-                suffix+='-';
-                for(int i=0;i<triple_bonds.size();++i)
-                {
-                    if (i) suffix+=',';
-                    suffix+=intToString(triple_bonds[i]);
-                }
-                suffix+='-';
-            }
-            if (triple_bonds.size()>1) suffix+=curr_dict.getNP(triple_bonds.size());
-            suffix+=curr_dict.CBI[3];
+            most_important=0;
+            if (suffix_subs.empty() && double_bonds.empty()) most_important=1;
+            suffix=findGN(triple_bonds,curr_dict.CBI[3],0,parent_chain.size(),cyclic,most_important);
             suffixes.push_back(suffix);
         }
-        if (complex_bonds.empty())
+
+        if (complex_bonds.empty() && (out==-1 || get<0>(suffix_subs[0])!=1))
         {
             suffix=curr_dict.CBI[1];
             suffixes.push_back(suffix);
         }
-        if (!OHs.empty())
-        {
-            suffix="";
-            if (parent_chain.size()>2)
-            {
-                suffix+='-';
-                for(int i=0;i<OHs.size();++i)
-                {
-                    if (i) suffix+=',';
-                    suffix+=intToString(OHs[i]);
-                }
-                suffix+='-';
-            }
-            if (OHs.size()>1) suffix+=curr_dict.getNP(OHs.size());
-            suffix+=curr_dict.FGS["OH"];
-            suffixes.push_back(suffix);
-        }
-        if (in!=-1)
-        {
-            suffix="";
-            attachment=findAttachment(parent_chain,out);
-            if (attachment.first!=1)
-            {
-                suffix+='-';
-                suffix+=intToString(attachment.first);
-                suffix+='-';
-            }
-            suffix+=curr_dict.SS[attachment.second];
-            if (suffixes[suffixes.size()-1]==curr_dict.CBI[1] && attachment.first==1)
-            {
-                suffixes[suffixes.size()-1]=suffix;
-            }
-            else
-            {
-                suffixes.push_back(suffix);
-            }
-        }
-        if (isParentChainCyclic(parent_chain)) name+=curr_dict.CP;
+
+        suffix=findGNs(suffix_subs,parent_chain.size(),cyclic,1);
+        suffixes.push_back(suffix);
+
+        if (cyclic) name+=curr_dict.CP;
+
         name+=curr_dict.getCNP(parent_chain.size());
+
         for (int i=0;i<suffixes.size();++i)
         {
             name=addSuffix(name,suffixes[i]);
         }
+
         if (in!=-1)
         {
-            for (int i=0;i<name.size();++i)
+            if (!prefix_subs.empty()) name="("+name+")";
+            else
             {
-                if (name[i]=='-')
+                for (int i=0;i<name.size();++i)
                 {
-                    name="("+name+")";
-                    break;
+                    if (name[i]=='-')
+                    {
+                        name="("+name+")";
+                        break;
+                    }
                 }
             }
         }
@@ -1783,7 +1663,7 @@ struct compound
     }
 };
 
-bool selected_element[4];
+bool selected_element[16];
 
 //Graphics related functions
 GLFWwindow* window,*window2;
@@ -2690,12 +2570,12 @@ void run(GLFWwindow* w)
 void setDictionaries()
 {
     English.CNP={"alka","metha","etha","propa","buta"};
-    English.CBI={"error","ane","ene","yne"};
-    English.NP={"error","mono","di","tri","tetra","penta","hexa","hepta","octa","nona",
+    English.CBI={English.error,"ane","ene","yne"};
+    English.NP={English.error,"mono","di","tri","tetra","penta","hexa","hepta","octa","nona",
     "deca","undeca","dodeca","trideca","tetradeca","pentadeca","hexadeca","heptadeca","octadeca","nonadeca",
     "icosa","henicosa","docosa","tricosa","tetracosa","pentacosa","hexacosa","heptacosa","octacosa","nonacosa",
     "triaconta","hentriaconta","hentriaconta","tritriaconta"};
-    English.SS={"error","yl","ylidene","ylidyne"};
+    English.SS={English.error,"yl","ylidene","ylidyne"};
     English.CP="cyclo";
 
     English.HP["F"]="fluoro";
@@ -2715,10 +2595,10 @@ void setDictionaries()
     dictionaries.push_back(English);
 
     Bulgarian.CNP={"алка","мета","ета","пропа","бута"};
-    Bulgarian.CBI={"грешка","ан","ен","ин"};
-    Bulgarian.NP={"грешка","моно","ди","три","тетра","пента","хекса","хепта","окта","нона",
+    Bulgarian.CBI={Bulgarian.error,"ан","ен","ин"};
+    Bulgarian.NP={Bulgarian.error,"моно","ди","три","тетра","пента","хекса","хепта","окта","нона",
     "дека","ундека","додека","тридека","тетрадека","пентадека","хексадека","хептадека","октадека","нонадека"};
-    Bulgarian.SS={"грешка","ил","илиден","илиден"};
+    Bulgarian.SS={Bulgarian.error,"ил","илиден","илиден"};
     Bulgarian.CP="цикло";
 
     Bulgarian.HP["F"]="флуоро";
