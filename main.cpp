@@ -222,7 +222,7 @@ struct compound
         if (new_valance<=0) return -1;
         if (new_bond>=atoms.size() || atoms[new_bond].symbol=="") return -1;
         atom a(new_symbol,new_valance,new_x,new_y,new_bond);
-        if (!atoms[new_bond].free_bonds.empty())
+        if (atoms[new_bond].canConnect(-1))
         {
             ind=addAtom(a);
             if (ind!=-1) atoms[new_bond].connect(ind);
@@ -300,7 +300,7 @@ struct compound
         if (minDistInd!=-1)
         {
             a=atoms[minDistInd];
-            if (x<a.x-0.05 || (x>a.x+0.05 && a.free_bonds.empty()) || x>a.x+0.15 || y<a.y-0.08 || y>a.y+0.08) minDistInd=-1;
+            if (x<a.x-0.05 || (x>a.x+0.05 && a.free_bonds.empty()) || x>a.x+0.175 || y<a.y-0.08 || y>a.y+0.08) minDistInd=-1;
         }
         return minDistInd;
     }
@@ -320,7 +320,7 @@ struct compound
         bool first_letter_vowel=0;
         for (int i=0;i<suffix.size();++i)
         {
-            if ((suffix[i]>='a' && suffix[i]<='z') || suffix[i]>='à' && suffix[i]<='ÿ')
+            if ((suffix[i]>='a' && suffix[i]<='z') || (suffix[i]>='à' && suffix[i]<='ÿ'))
             {
                 if (suffix[i]=='a' || suffix[i]=='e' || suffix[i]=='i' || suffix[i]=='o'
                     || suffix[i]=='u' || suffix[i]=='y' || suffix[i]=='à' || suffix[i]=='ú'
@@ -1675,7 +1675,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
     if (key==GLFW_KEY_ESCAPE && action==GLFW_PRESS) glfwSetWindowShouldClose(window,1);
     if (key==GLFW_KEY_BACKSPACE && action==GLFW_PRESS) pressed=-3;
-    if (key==GLFW_KEY_RIGHT_SHIFT || key==GLFW_KEY_LEFT_SHIFT && action==GLFW_PRESS) snappingEnabled=!snappingEnabled;
+    if ((key==GLFW_KEY_RIGHT_SHIFT || key==GLFW_KEY_LEFT_SHIFT) && action==GLFW_PRESS) snappingEnabled=!snappingEnabled;
     if (key==GLFW_KEY_R && action==GLFW_PRESS) pressed=-5;
     if (key==GLFW_KEY_L && action==GLFW_PRESS) pressed=-6;
     if (key==GLFW_KEY_N && action==GLFW_PRESS) pressed=-7;
@@ -2308,7 +2308,7 @@ void drawAtom(atom& a)
 
         glEnd();
 
-        if (a.symbol=="C" || a.symbol=="O")
+        if (a.symbol=="C" || (a.symbol=="O" && a.free_bonds.size()<2))
         {
             nextpos=drawSymbol(a.symbol,a.x*scale,a.y*scale,1);
             nextpos=drawSymbol(element_symbol[0],nextpos,a.y*scale,0);
@@ -2536,7 +2536,7 @@ void run(GLFWwindow* w)
                     if (result!=-1)
                     {
                         history.push_back(c);
-                        if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[last].free_bonds.empty()) last2=-1;
+                        if (pressed==GLFW_MOUSE_BUTTON_LEFT || !c.atoms[last].canConnect(-1)) last2=-1;
                         else last2=last;
                     }
                     last=-1;
@@ -2548,7 +2548,7 @@ void run(GLFWwindow* w)
                     if (result!=-1)
                     {
                         history.push_back(c);
-                        if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[result].free_bonds.empty()) last2=-1;
+                        if (pressed==GLFW_MOUSE_BUTTON_LEFT || !c.atoms[result].canConnect(-1)) last2=-1;
                         else last2=result;
                     }
                     last=-1;
@@ -2562,7 +2562,7 @@ void run(GLFWwindow* w)
                     history.push_back(c);
                     if (result!=-1)
                     {
-                        if (pressed==GLFW_MOUSE_BUTTON_LEFT || c.atoms[result].free_bonds.empty()) last2=-1;
+                        if (pressed==GLFW_MOUSE_BUTTON_LEFT || !c.atoms[result].canConnect(-1)) last2=-1;
                         else last2=result;
                     }
                 }
@@ -2570,7 +2570,7 @@ void run(GLFWwindow* w)
                 {
                     if (pressed==GLFW_MOUSE_BUTTON_LEFT) toMove=1;
                     else toMove=0;
-                    if (toMove || !c.atoms[last].free_bonds.empty())
+                    if (toMove || c.atoms[last].canConnect(-1))
                     {
                         last2=last;
                     }
