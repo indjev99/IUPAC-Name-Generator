@@ -1761,275 +1761,293 @@ void drawPartEllipse(float x, float y, float radiusX, float radiusY, double alph
 }
 double drawSymbol1(char symbol, double x, double y, bool centered)
 {
+    double scale=1.0*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
     if (symbol=='C')
     {
-        if (!centered) x+=0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        if (!centered) x+=0.055*scale;
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
-        drawPartEllipse(x,y,0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,360);
+        drawPartEllipse(x,y,0.055*scale,0.085*scale,0,360);
 
         glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
-        drawPartEllipse(x,y,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,50,310);
+        drawPartEllipse(x,y,0.05*scale,0.08*scale,50,310);
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
-        drawPartEllipse(x,y,0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,360);
-        return x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        drawPartEllipse(x,y,0.035*scale,0.065*scale,0,360);
+        return x+0.035*scale;
     }
     if (symbol=='O')
     {
-        if (!centered) x+=0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        if (!centered) x+=0.055*scale;
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
-        drawPartEllipse(x,y,0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,360);
+        drawPartEllipse(x,y,0.055*scale,0.085*scale,0,360);
 
         glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
-        drawPartEllipse(x,y,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,360);
+        drawPartEllipse(x,y,0.05*scale,0.08*scale,0,360);
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-        drawPartEllipse(x,y,0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,360);
-        return x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        drawPartEllipse(x,y,0.035*scale,0.065*scale,0,360);
+        return x+0.035*scale;
     }
     if (symbol=='H')
     {
-        if (!centered) x+=0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        if (!centered) x+=0.055*scale;
 
         glBegin(GL_QUADS);
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-        glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.055*scale,y-0.085*scale);
+        glVertex2f(x+0.055*scale,y-0.085*scale);
+        glVertex2f(x+0.055*scale,y+0.085*scale);
+        glVertex2f(x-0.055*scale,y+0.085*scale);
 
         glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
 
-        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.05*scale,y-0.08*scale);
+        glVertex2f(x-0.035*scale,y-0.08*scale);
+        glVertex2f(x-0.035*scale,y+0.08*scale);
+        glVertex2f(x-0.05*scale,y+0.08*scale);
 
-        glVertex2f(x+0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x+0.05*scale,y-0.08*scale);
+        glVertex2f(x+0.035*scale,y-0.08*scale);
+        glVertex2f(x+0.035*scale,y+0.08*scale);
+        glVertex2f(x+0.05*scale,y+0.08*scale);
 
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*scale,y-0.0075*scale);
+        glVertex2f(x+0.035*scale,y-0.0075*scale);
+        glVertex2f(x+0.035*scale,y+0.0075*scale);
+        glVertex2f(x-0.035*scale,y+0.0075*scale);
 
         glEnd();
-        return x+0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        return x+0.05*scale;
     }
     if (symbol=='F')
     {
-        if (!centered) x+=0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        if (!centered) x+=0.055*scale;
 
         glBegin(GL_QUADS);
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-        glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.055*scale,y-0.085*scale);
+        glVertex2f(x+0.04*scale,y-0.085*scale);
+        glVertex2f(x+0.04*scale,y+0.085*scale);
+        glVertex2f(x-0.055*scale,y+0.085*scale);
 
         glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
 
-        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.05*scale,y-0.08*scale);
+        glVertex2f(x-0.035*scale,y-0.08*scale);
+        glVertex2f(x-0.035*scale,y+0.08*scale);
+        glVertex2f(x-0.05*scale,y+0.08*scale);
 
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*scale,y+0.08*scale);
+        glVertex2f(x+0.035*scale,y+0.08*scale);
+        glVertex2f(x+0.035*scale,y+0.065*scale);
+        glVertex2f(x-0.035*scale,y+0.065*scale);
 
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*scale,y-0.0075*scale);
+        glVertex2f(x+0.035*scale,y-0.0075*scale);
+        glVertex2f(x+0.035*scale,y+0.0075*scale);
+        glVertex2f(x-0.035*scale,y+0.0075*scale);
 
         glEnd();
-        return x+0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        return x+0.05*scale;
     }
     if (symbol=='E')
     {
-        if (!centered) x+=0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        if (!centered) x+=0.055*scale;
 
         glBegin(GL_QUADS);
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-        glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.055*scale,y-0.085*scale);
+        glVertex2f(x+0.04*scale,y-0.085*scale);
+        glVertex2f(x+0.04*scale,y+0.085*scale);
+        glVertex2f(x-0.055*scale,y+0.085*scale);
 
         glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
 
-        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.05*scale,y-0.08*scale);
+        glVertex2f(x-0.035*scale,y-0.08*scale);
+        glVertex2f(x-0.035*scale,y+0.08*scale);
+        glVertex2f(x-0.05*scale,y+0.08*scale);
 
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*scale,y+0.08*scale);
+        glVertex2f(x+0.035*scale,y+0.08*scale);
+        glVertex2f(x+0.035*scale,y+0.065*scale);
+        glVertex2f(x-0.035*scale,y+0.065*scale);
 
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*scale,y-0.0075*scale);
+        glVertex2f(x+0.035*scale,y-0.0075*scale);
+        glVertex2f(x+0.035*scale,y+0.0075*scale);
+        glVertex2f(x-0.035*scale,y+0.0075*scale);
 
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.035*scale,y-0.08*scale);
+        glVertex2f(x+0.035*scale,y-0.08*scale);
+        glVertex2f(x+0.035*scale,y-0.065*scale);
+        glVertex2f(x-0.035*scale,y-0.065*scale);
 
         glEnd();
-        return x+0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        return x+0.05*scale;
     }
     if (symbol=='I')
     {
-        if (!centered) x+=0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        if (!centered) x+=0.0275*scale;
 
         glBegin(GL_QUADS);
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-        glVertex2f(x-0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.0275*scale,y-0.085*scale);
+        glVertex2f(x+0.0275*scale,y-0.085*scale);
+        glVertex2f(x+0.0275*scale,y+0.085*scale);
+        glVertex2f(x-0.0275*scale,y+0.085*scale);
 
         glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
 
-        glVertex2f(x-0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.0225*scale,y+0.08*scale);
+        glVertex2f(x+0.0225*scale,y+0.08*scale);
+        glVertex2f(x+0.0225*scale,y+0.065*scale);
+        glVertex2f(x-0.0225*scale,y+0.065*scale);
 
-        glVertex2f(x-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.0075*scale,y-0.08*scale);
+        glVertex2f(x+0.0075*scale,y-0.08*scale);
+        glVertex2f(x+0.0075*scale,y+0.08*scale);
+        glVertex2f(x-0.0075*scale,y+0.08*scale);
 
 
-        glVertex2f(x-0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.065*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.0225*scale,y-0.08*scale);
+        glVertex2f(x+0.0225*scale,y-0.08*scale);
+        glVertex2f(x+0.0225*scale,y-0.065*scale);
+        glVertex2f(x-0.0225*scale,y-0.065*scale);
 
         glEnd();
-        return x+0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        return x+0.0225*scale;
     }
     if (symbol=='B')
     {
-        if (!centered) x+=0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        if (!centered) x+=0.05*scale;
 
         glBegin(GL_QUADS);
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.025*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.025*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.05*scale,y-0.085*scale);
+        glVertex2f(x-0.025*scale,y-0.085*scale);
+        glVertex2f(x-0.025*scale,y+0.085*scale);
+        glVertex2f(x-0.05*scale,y+0.085*scale);
 
         glEnd();
 
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
+        drawPartEllipse(x-0.03*scale,y+0.04*scale,0.05*scale,0.045*scale,270,360);
+        drawPartEllipse(x-0.03*scale,y+0.04*scale,0.05*scale,0.045*scale,0,90);
 
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
+        drawPartEllipse(x-0.03*scale,y-0.035*scale,0.055*scale,0.05*scale,270,360);
+        drawPartEllipse(x-0.03*scale,y-0.035*scale,0.055*scale,0.05*scale,0,90);
 
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y,0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y,0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
+        drawPartEllipse(x-0.03*scale,y,0.055*scale,0.085*scale,270,360);
+        drawPartEllipse(x-0.03*scale,y,0.055*scale,0.085*scale,0,90);
 
         glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
 
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.05*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
+        drawPartEllipse(x-0.03*scale,y+0.04*scale,0.045*scale,0.04*scale,270,360);
+        drawPartEllipse(x-0.03*scale,y+0.04*scale,0.045*scale,0.04*scale,0,90);
+
+        drawPartEllipse(x-0.03*scale,y-0.035*scale,0.05*scale,0.045*scale,270,360);
+        drawPartEllipse(x-0.03*scale,y-0.035*scale,0.05*scale,0.045*scale,0,90);
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.025*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.025*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
 
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,270,360);
-        drawPartEllipse(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0,90);
+        drawPartEllipse(x-0.03*scale,y+0.04*scale,0.03*scale,0.025*scale,270,360);
+        drawPartEllipse(x-0.03*scale,y+0.04*scale,0.03*scale,0.025*scale,0,90);
+
+        drawPartEllipse(x-0.03*scale,y-0.035*scale,0.035*scale,0.03*scale,270,360);
+        drawPartEllipse(x-0.03*scale,y-0.035*scale,0.035*scale,0.03*scale,0,90);
 
         glBegin(GL_QUADS);
 
         glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
-        glVertex2f(x-0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.03*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.045*scale,y-0.08*scale);
+        glVertex2f(x-0.03*scale,y-0.08*scale);
+        glVertex2f(x-0.03*scale,y+0.08*scale);
+        glVertex2f(x-0.045*scale,y+0.08*scale);
 
         glEnd();
-        return x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        return x+0.02*scale;
     }
     if (symbol=='l')
     {
-        if (!centered) x+=0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        if (!centered) x+=0.0125*scale;
 
         glBegin(GL_QUADS);
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-        glVertex2f(x-0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.0125*scale,y-0.085*scale);
+        glVertex2f(x+0.0125*scale,y-0.085*scale);
+        glVertex2f(x+0.0125*scale,y+0.085*scale);
+        glVertex2f(x-0.0125*scale,y+0.085*scale);
 
         glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
 
-        glVertex2f(x-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.0075*scale,y-0.08*scale);
+        glVertex2f(x+0.0075*scale,y-0.08*scale);
+        glVertex2f(x+0.0075*scale,y+0.08*scale);
+        glVertex2f(x-0.0075*scale,y+0.08*scale);
 
         glEnd();
-        return x+0.0075*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        return x+0.0075*scale;
     }
     if (symbol=='r')
     {
-        if (!centered) x+=0.04125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        if (!centered) x+=0.04125*scale;
 
         glBegin(GL_QUADS);
 
         glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-        glVertex2f(x-0.04125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.04125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.04125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.04125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(x-0.04125*scale,y-0.085*scale);
+        glVertex2f(x-0.01625*scale,y-0.085*scale);
+        glVertex2f(x-0.01625*scale,y+0.01*scale);
+        glVertex2f(x-0.04125*scale,y+0.01*scale);
+
+        glVertex2f(x-0.04125*scale,y-0.085*scale);
+        glVertex2f(x-0.01625*scale,y-0.085*scale);
+        glVertex2f(x+0.046*scale,y-0.01*scale);
+        glVertex2f(x-0.04125*scale,y-0.01*scale);
+
+        glEnd();
+
+        drawPartEllipse(x,y-0.06*scale,0.07*scale,0.065*scale,50,125);
 
         glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
 
-        glVertex2f(x-0.03625*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.02125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.02125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x-0.03625*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        drawPartEllipse(x,y-0.06*scale,0.065*scale,0.06*scale,55,125);
 
-        glVertex2f(x-0.02125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.015*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.03625*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.015*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(x+0.03625*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
-        glVertex2f(x-0.02125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
+        glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
+
+        drawPartEllipse(x,y-0.06*scale,0.05*scale,0.045*scale,55,125);
+
+        glBegin(GL_QUADS);
+
+        glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
+
+        glVertex2f(x-0.03625*scale,y-0.08*scale);
+        glVertex2f(x-0.02125*scale,y-0.08*scale);
+        glVertex2f(x-0.02125*scale,y+0.005*scale);
+        glVertex2f(x-0.03625*scale,y+0.005*scale);
 
         glEnd();
-        return x+0.03625*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+        return x+0.03625*scale;
     }
 }
 double drawSymbol(string symbol, double x, double y, bool centered)
 {
+    double scale=1.0*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
     //cerr<<symbol<<endl;
     double nextpos=x;
     for (int i=0;i<symbol.size();++i)
@@ -2039,10 +2057,11 @@ double drawSymbol(string symbol, double x, double y, bool centered)
         else nextpos=drawSymbol1(symbol[i],nextpos,y,0);
         //cerr<<" "<<nextpos<<endl;
     }
-    return nextpos+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+    return nextpos+0.02*scale;
 }
 double drawIndex(int index, double x, double y)
 {
+    double scale=1.0*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
     if (index<=1) return x;
     vector<int> digits;
     do
@@ -2059,10 +2078,10 @@ double drawIndex(int index, double x, double y)
 
             glBegin(GL_QUADS);
 
-            glVertex2f(x,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.015*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.015*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y-0.005*scale);
+            glVertex2f(x+0.015*scale,y-0.005*scale);
+            glVertex2f(x+0.015*scale,y+0.085*scale);
+            glVertex2f(x,y+0.085*scale);
 
             glEnd();
 
@@ -2074,35 +2093,35 @@ double drawIndex(int index, double x, double y)
 
             glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-            glVertex2f(x,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y-0.005*scale);
+            glVertex2f(x+0.045*scale,y-0.005*scale);
+            glVertex2f(x+0.045*scale,y+0.085*scale);
+            glVertex2f(x,y+0.085*scale);
 
             glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);;
 
             glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
 
             glVertex2f(x,y);
-            glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
-            glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.04*scale,y);
+            glVertex2f(x+0.04*scale,y+0.08*scale);
+            glVertex2f(x,y+0.08*scale);
 
             glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0125*scale,y+0.045*scale);
+            glVertex2f(x+0.0275*scale,y+0.045*scale);
+            glVertex2f(x+0.0275*scale,y+0.07*scale);
+            glVertex2f(x+0.0125*scale,y+0.07*scale);
 
-            glVertex2f(x,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.01*scale);
+            glVertex2f(x+0.0275*scale,y+0.01*scale);
+            glVertex2f(x+0.0275*scale,y+0.035*scale);
+            glVertex2f(x,y+0.035*scale);
 
             glEnd();
 
-            x+=0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+            x+=0.04*scale;
         }
         if (digits[i]==4)
         {
@@ -2110,35 +2129,35 @@ double drawIndex(int index, double x, double y)
 
             glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-            glVertex2f(x,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y-0.005*scale);
+            glVertex2f(x+0.045*scale,y-0.005*scale);
+            glVertex2f(x+0.045*scale,y+0.085*scale);
+            glVertex2f(x,y+0.085*scale);
 
             glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);;
 
             glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
 
             glVertex2f(x,y);
-            glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
-            glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.04*scale,y);
+            glVertex2f(x+0.04*scale,y+0.08*scale);
+            glVertex2f(x,y+0.08*scale);
 
             glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0125*scale,y+0.045*scale);
+            glVertex2f(x+0.0275*scale,y+0.045*scale);
+            glVertex2f(x+0.0275*scale,y+0.08*scale);
+            glVertex2f(x+0.0125*scale,y+0.08*scale);
 
             glVertex2f(x,y);
-            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
-            glVertex2f(x+0.0275*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0275*scale,y);
+            glVertex2f(x+0.0275*scale,y+0.035*scale);
+            glVertex2f(x,y+0.035*scale);
 
             glEnd();
 
-            x+=0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+            x+=0.04*scale;
         }
         if (digits[i]==3)
         {
@@ -2146,35 +2165,35 @@ double drawIndex(int index, double x, double y)
 
             glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-            glVertex2f(x,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0375*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0375*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y-0.005*scale);
+            glVertex2f(x+0.0375*scale,y-0.005*scale);
+            glVertex2f(x+0.0375*scale,y+0.085*scale);
+            glVertex2f(x,y+0.085*scale);
 
             glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);;
 
             glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
 
             glVertex2f(x,y);
-            glVertex2f(x+0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
-            glVertex2f(x+0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0325*scale,y);
+            glVertex2f(x+0.0325*scale,y+0.08*scale);
+            glVertex2f(x,y+0.08*scale);
 
             glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-            glVertex2f(x,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.045*scale);
+            glVertex2f(x+0.02*scale,y+0.045*scale);
+            glVertex2f(x+0.02*scale,y+0.07*scale);
+            glVertex2f(x,y+0.07*scale);
 
-            glVertex2f(x,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.01*scale);
+            glVertex2f(x+0.02*scale,y+0.01*scale);
+            glVertex2f(x+0.02*scale,y+0.035*scale);
+            glVertex2f(x,y+0.035*scale);
 
             glEnd();
 
-            x+=0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+            x+=0.0325*scale;
         }
         if (digits[i]==2)
         {
@@ -2182,35 +2201,35 @@ double drawIndex(int index, double x, double y)
 
             glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-            glVertex2f(x,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0375*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0375*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y-0.005*scale);
+            glVertex2f(x+0.0375*scale,y-0.005*scale);
+            glVertex2f(x+0.0375*scale,y+0.085*scale);
+            glVertex2f(x,y+0.085*scale);
 
             glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);;
 
             glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
 
             glVertex2f(x,y);
-            glVertex2f(x+0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
-            glVertex2f(x+0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0325*scale,y);
+            glVertex2f(x+0.0325*scale,y+0.08*scale);
+            glVertex2f(x,y+0.08*scale);
 
             glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-            glVertex2f(x,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.045*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y+0.045*scale);
+            glVertex2f(x+0.02*scale,y+0.045*scale);
+            glVertex2f(x+0.02*scale,y+0.07*scale);
+            glVertex2f(x,y+0.07*scale);
 
-            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0125*scale,y+0.01*scale);
+            glVertex2f(x+0.0325*scale,y+0.01*scale);
+            glVertex2f(x+0.0325*scale,y+0.035*scale);
+            glVertex2f(x+0.0125*scale,y+0.035*scale);
 
             glEnd();
 
-            x+=0.0325*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+            x+=0.0325*scale;
         }
         if (digits[i]==1)
         {
@@ -2218,21 +2237,21 @@ double drawIndex(int index, double x, double y)
 
             glBegin(GL_QUADS);
 
-            glVertex2f(x,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0175*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0175*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y-0.005*scale);
+            glVertex2f(x+0.0175*scale,y-0.005*scale);
+            glVertex2f(x+0.0175*scale,y+0.085*scale);
+            glVertex2f(x,y+0.085*scale);
 
             glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);;
 
             glVertex2f(x,y);
-            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
-            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0125*scale,y);
+            glVertex2f(x+0.0125*scale,y+0.08*scale);
+            glVertex2f(x,y+0.08*scale);
 
             glEnd();
 
-            x+=0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+            x+=0.0125*scale;
         }
         if (digits[i]==0)
         {
@@ -2240,40 +2259,41 @@ double drawIndex(int index, double x, double y)
 
             glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-            glVertex2f(x,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y-0.005*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.04*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.085*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x,y-0.005*scale);
+            glVertex2f(x+0.04*scale,y-0.005*scale);
+            glVertex2f(x+0.04*scale,y+0.085*scale);
+            glVertex2f(x,y+0.085*scale);
 
             glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);;
 
             glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
 
             glVertex2f(x,y);
-            glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y);
-            glVertex2f(x+0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x,y+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.035*scale,y);
+            glVertex2f(x+0.035*scale,y+0.08*scale);
+            glVertex2f(x,y+0.08*scale);
 
             glColor3f(BACKGROUND_COLOUR_R,BACKGROUND_COLOUR_G,BACKGROUND_COLOUR_B);
 
-            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.01*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0225*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            glVertex2f(x+0.0125*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,y+0.07*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            glVertex2f(x+0.0125*scale,y+0.01*scale);
+            glVertex2f(x+0.0225*scale,y+0.01*scale);
+            glVertex2f(x+0.0225*scale,y+0.07*scale);
+            glVertex2f(x+0.0125*scale,y+0.07*scale);
 
             glEnd();
 
-            x+=0.035*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
+            x+=0.035*scale;
         }
     }
     return x;
 }
 void drawAtom(atom& a)
 {
+    double scale=1.0*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
     double nextpos;
     if (a.free_bonds.empty())
     {
-        drawSymbol(a.symbol,a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,1);
+        drawSymbol(a.symbol,a.x*scale,a.y*scale,1);
     }
     else
     {
@@ -2281,30 +2301,31 @@ void drawAtom(atom& a)
 
         glBegin(GL_QUADS);
 
-        glVertex2f(a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT+0.055*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f(a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT+0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f(a.x*scale,a.y*scale-0.08*scale);
+        glVertex2f(a.x*scale+0.055*scale,a.y*scale-0.08*scale);
+        glVertex2f(a.x*scale+0.055*scale,a.y*scale+0.08*scale);
+        glVertex2f(a.x*scale,a.y*scale+0.08*scale);
 
         glEnd();
 
         if (a.symbol=="C" || a.symbol=="O")
         {
-            nextpos=drawSymbol(a.symbol,a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,1);
-            nextpos=drawSymbol(element_symbol[0],nextpos,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0);
-            drawIndex(a.free_bonds.size(),nextpos-0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+            nextpos=drawSymbol(a.symbol,a.x*scale,a.y*scale,1);
+            nextpos=drawSymbol(element_symbol[0],nextpos,a.y*scale,0);
+            drawIndex(a.free_bonds.size(),nextpos-0.02*scale,a.y*scale-0.08*scale);
         }
         else
         {
-            nextpos=drawSymbol(element_symbol[0],a.x*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,1);
-            nextpos=drawIndex(a.free_bonds.size(),nextpos-0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT-0.08*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-            nextpos+=0.02*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
-            nextpos=drawSymbol(a.symbol,nextpos,a.y*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,0);
+            nextpos=drawSymbol(element_symbol[0],a.x*scale,a.y*scale,1);
+            nextpos=drawIndex(a.free_bonds.size(),nextpos-0.02*scale,a.y*scale-0.08*scale);
+            nextpos+=0.02*scale;
+            nextpos=drawSymbol(a.symbol,nextpos,a.y*scale,0);
         }
     }
 }
 void drawBond(double x1, double y1, double x2, double y2, int num)
 {
+    double scale=1.0*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT;
     double offset,x,y,deltax,deltay;
     glColor3f(TEXT_COLOUR_R,TEXT_COLOUR_G,TEXT_COLOUR_B);
     glLineWidth(4.0);
@@ -2328,13 +2349,14 @@ void drawBond(double x1, double y1, double x2, double y2, int num)
     for (int i=0;i<num;++i)
     {
         offset=((num-1)*0.5-i)*0.02;
-        glVertex2f((x1+offset*x)*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,(y1+offset*y)*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
-        glVertex2f((x2+offset*x)*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT,(y2+offset*y)*ORIGINAL_WINDOWS_HEIGHT/WINDOWS_HEIGHT);
+        glVertex2f((x1+offset*x)*scale,(y1+offset*y)*scale);
+        glVertex2f((x2+offset*x)*scale,(y2+offset*y)*scale);
     }
     glEnd();
 }
 void drawCompound(GLFWwindow* w, compound& c)
 {
+    double proportion=1.0*WINDOWS_WIDTH/WINDOWS_HEIGHT;
     atom a,a2;
 
     //background
@@ -2343,10 +2365,10 @@ void drawCompound(GLFWwindow* w, compound& c)
 
     glBegin(GL_QUADS);
 
-    glVertex2f(-1.0*WINDOWS_WIDTH/WINDOWS_HEIGHT,-1.0);
-    glVertex2f(1.0*WINDOWS_WIDTH/WINDOWS_HEIGHT,-1.0);
-    glVertex2f(1.0*WINDOWS_WIDTH/WINDOWS_HEIGHT,1.0);
-    glVertex2f(-1.0*WINDOWS_WIDTH/WINDOWS_HEIGHT,1.0);
+    glVertex2f(-1.0*proportion,-1.0);
+    glVertex2f(1.0*proportion,-1.0);
+    glVertex2f(1.0*proportion,1.0);
+    glVertex2f(-1.0*proportion,1.0);
 
     glEnd();
 
