@@ -224,7 +224,7 @@ struct compound
         if (new_valance<=0) return -1;
         if (new_bond>=atoms.size() || atoms[new_bond].symbol=="") return -1;
         atom a(new_symbol,new_valance,new_x,new_y,new_bond);
-        if (atoms[new_bond].canConnect(-1))
+        if (atoms[new_bond].canConnect(-2))
         {
             ind=addAtom(a);
             if (ind!=-1) atoms[new_bond].connect(ind);
