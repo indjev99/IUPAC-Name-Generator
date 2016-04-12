@@ -43,6 +43,8 @@ struct dictionary
     unordered_map<string, string> HP; //halogen_prefixes
     unordered_map<string, string> FGP; //functional_group_prefixes
     unordered_map<string, string> FGS; //functional_group_suffixes
+    string benzene;
+    string phen;
 
     string getCNP(int CN)
     {
@@ -63,7 +65,7 @@ struct dictionary
 vector<string> element_symbol={"H","C","O","F","Cl","Br","I"};
 vector<int> element_valence={1,4,2,1,1,1,1};
 vector<string> halogen_symbol={"F","Cl","Br","I"};
-unordered_map<string, int> substituent_priorities={{"alkyl",-1},{"halogen",-1},{"hydroxyl",1},{"attachment",100}};
+unordered_map<string, int> substituent_priorities={{"alkyl",-1},{"alkyl halide",-1},{"alcohol",1},{"ketone",2},{"aldehyde",3},{"carboxylic acid",4},{"attachment",100}};
 
 dictionary Bulgarian,English,curr_dict;
 vector<dictionary> dictionaries;
@@ -121,11 +123,11 @@ struct atom
     }
     bool canConnect(int bond)
     {
-        if (symbol=="O" && free_bonds.size()<2) return 0; //remove to add ketones and eters and so on
         if (!free_bonds.empty())
         {
             int nc=isConnected(bond);
             if (nc>=0 && symbol=="C" && bonds[nc].spots_taken.size()==bonds.size()-1) return 0;
+            if (bond!=-1 && nc==-1 && free_bonds.size()<2) return 0;
             return 1;
         }
         return 0;
@@ -450,19 +452,57 @@ struct compound
         }
         return -1;
     }
-    int findMaxCon()
+    bool isHalogen(string s)
     {
-        atom a;
-        int maxcon=1;
-        for (int i=0;i<atoms.size();++i)
+        for (int i=0;i<halogen_symbol.size();++i)
         {
-            a=atoms[i];
-            if (a.symbol=="C") for (int j=0;j<a.bonds.size();++j)
+            if (s==halogen_symbol[i]) return 1;
+        }
+        return 0;
+    }
+    vector<string> findFunctionalGroups(atom a, int out)
+    {
+        vector<string> ans;
+        if (out!=-1 && a.isConnected(out)!=-1) ans.push_back("attachment");
+        int carbonyl=0;
+        int hydroxyl=0;
+        int carbon=0;
+        for (int i=0;i<a.bonds.size();++i)
+        {
+            if (a.bonds[i].to==-1 || a.bonds[i].to==out) continue;
+            if (atoms[a.bonds[i].to].symbol=="O")
             {
-                if (a.bonds[j].to!=-1 && atoms[a.bonds[j].to].symbol=="C" && a.bonds[j].spots_taken.size()>maxcon) maxcon=a.bonds[j].spots_taken.size();
+                if (atoms[a.bonds[i].to].free_bonds.empty())
+                {
+                    ++carbonyl;
+                }
+                else
+                {
+                    ++hydroxyl;
+                }
+            }
+            if (atoms[a.bonds[i].to].symbol=="C")
+            {
+                ++carbon;
             }
         }
-        return maxcon;
+
+        //cerr<<"Carbonyl and hydroxyl: "<<carbonyl<<" "<<hydroxyl<<endl;
+
+        while (carbonyl || hydroxyl)
+        {
+            if (carbonyl)
+            {
+                --carbonyl;
+                if (hydroxyl) ans.push_back("carboxylic acid");
+                //else if (!a.free_bonds.empty()) ans.push_back("aldehyde");
+                else if (carbon<2) ans.push_back("aldehyde");
+                else ans.push_back("ketone");
+            }
+            else if (hydroxyl) ans.push_back("alcohol");
+            if (hydroxyl) --hydroxyl;
+        }
+        return ans;
     }
     pair<vector<int>, vector<int> > findFarthest(int s, int out)
     {
@@ -475,6 +515,7 @@ struct compound
         pair<int, vector<int>> curr;
         int f;
         int priority;
+        vector<string> groups;
         vis.resize(atoms.size());
         for (int i=0;i<vis.size();++i) vis[i]=0;
         curr.first=s;
@@ -493,16 +534,9 @@ struct compound
             st.pop();
             a=atoms[curr.first];
             --curr.second[2];
-            priority=0;
-            if (a.isConnected(out)!=-1) priority=substituent_priorities["attachment"];
-            if (!priority)
-            {
-                for (int i=0;i<a.bonds.size();++i)
-                {
-                    if (a.bonds[i].to!=-1 && atoms[a.bonds[i].to].symbol=="O" && !atoms[a.bonds[i].to].free_bonds.empty()) priority=substituent_priorities["hydroxyl"];
-                }
-            }
-            priority=-priority;
+            priority=1;
+            groups=findFunctionalGroups(a,out);
+            if (groups.size()) priority=-substituent_priorities[groups[0]];
             if (priority<curr.second[0])
             {
                 curr.second[0]=priority;
@@ -511,6 +545,11 @@ struct compound
             if (priority==curr.second[0])
             {
                 --curr.second[1];
+                for (int i=1;i<groups.size();++i)
+                {
+                    if (groups[i]==groups[i-1]) --curr.second[1];
+                    else break;
+                }
             }
             f=cmpVectors(curr.second,max_dist);
             if (f==1)
@@ -582,28 +621,6 @@ struct compound
         }
         return prev;
     }
-    pair<int, int> findAttachment(vector<int> parent_chain, int out)
-    {
-        atom a;
-        pair<int, int> attachment;
-        attachment.first=0;
-        attachment.second=0;
-        if (out==-1) return attachment;
-        for (int i=0;i<parent_chain.size();++i)
-        {
-            a=atoms[parent_chain[i]];
-            for (int j=0;j<a.bonds.size();++j)
-            {
-                if (a.bonds[j].to==out)
-                {
-                    attachment.first=i+1;
-                    attachment.second=a.bonds[j].spots_taken.size();
-                    return attachment;
-                }
-            }
-        }
-        return attachment;
-    }
     vector<pair<int, int> > findComplexBonds(vector<int> parent_chain)
     {
         atom a;
@@ -630,38 +647,20 @@ struct compound
     }
     int findHighestPriority(vector<int> parent_chain, int out)
     {
+        //cerr<<"TO CALC MAX P"<<endl;
         atom a;
         int max_priority=0;
         int curr_p;
         int PCS=parent_chain.size();
+        vector<string> groups;
         for (int i=0;i<PCS;++i)
         {
             a=atoms[parent_chain[i]];
-            for (int j=0;j<a.bonds.size();++j)
+            groups=findFunctionalGroups(a,out);
+            for (int j=0;j<groups.size();++j)
             {
-                if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[(i-1+PCS)%PCS] && a.bonds[j].to!=parent_chain[(i+1)%PCS])
-                {
-                    if (a.bonds[j].to==out)
-                    {
-                        curr_p=substituent_priorities["attachment"];
-                        if (curr_p>max_priority) max_priority=curr_p;
-                    }
-                    else if (atoms[a.bonds[j].to].symbol=="O" && atoms[a.bonds[j].to].free_bonds.size()>0)
-                    {
-                        curr_p=substituent_priorities["hydroxyl"];
-                        if (curr_p>max_priority) max_priority=curr_p;
-                    }
-                    else if (atoms[a.bonds[j].to].symbol=="F" || atoms[a.bonds[j].to].symbol=="Cl" || atoms[a.bonds[j].to].symbol=="Br" || atoms[a.bonds[j].to].symbol=="I")
-                    {
-                        curr_p=substituent_priorities["halogen"];
-                        if (curr_p>max_priority) max_priority=curr_p;
-                    }
-                    else if (atoms[a.bonds[j].to].symbol=="C")
-                    {
-                        curr_p=substituent_priorities["alkyl"];
-                        if (curr_p>max_priority) max_priority=curr_p;
-                    }
-                }
+                curr_p=substituent_priorities[groups[j]];
+                if (curr_p>max_priority) max_priority=curr_p;
             }
         }
         return max_priority;
@@ -671,8 +670,10 @@ struct compound
         atom a;
         vector<tuple<int, string, bool> > subs;
         tuple<int, string, bool> sub;
+        vector<string> groups;
         int PCS=parent_chain.size();
         int max_priority=findHighestPriority(parent_chain,out);
+        //cerr<<"MAX P: "<<max_priority<<endl;
         int curr_p;
         for (int i=0;i<PCS;++i)
         {
@@ -681,41 +682,10 @@ struct compound
             {
                 if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[(i-1+PCS)%PCS] && a.bonds[j].to!=parent_chain[(i+1)%PCS])
                 {
-                    if (a.bonds[j].to==out)
+                    if (a.bonds[j].to==out);
+                    else if (isHalogen(atoms[a.bonds[j].to].symbol))
                     {
-                        curr_p=substituent_priorities["attachment"];
-                        if ((prefix && curr_p<max_priority) || (!prefix && curr_p>=max_priority))
-                        {
-                            get<0>(sub)=i+1;
-                            if (want_names)
-                            {
-                                if (prefix) get<1>(sub)=curr_dict.error;
-                                else get<1>(sub)=curr_dict.SS[a.bonds[j].spots_taken.size()];
-                            }
-                            else get<1>(sub)="";
-                            get<2>(sub)=0;
-                            subs.push_back(sub);
-                        }
-                    }
-                    else if (atoms[a.bonds[j].to].symbol=="O" && atoms[a.bonds[j].to].free_bonds.size()>0)
-                    {
-                        curr_p=substituent_priorities["hydroxyl"];
-                        if ((prefix && curr_p<max_priority) || (!prefix && curr_p>=max_priority))
-                        {
-                            get<0>(sub)=i+1;
-                            if (want_names)
-                            {
-                                if (prefix) get<1>(sub)=curr_dict.FGP["OH"];
-                                else get<1>(sub)=curr_dict.FGS["OH"];
-                            }
-                            else get<1>(sub)="";
-                            get<2>(sub)=0;
-                            subs.push_back(sub);
-                        }
-                    }
-                    else if (atoms[a.bonds[j].to].symbol=="F" || atoms[a.bonds[j].to].symbol=="Cl" || atoms[a.bonds[j].to].symbol=="Br" || atoms[a.bonds[j].to].symbol=="I")
-                    {
-                        curr_p=substituent_priorities["halogen"];
+                        curr_p=substituent_priorities["alkyl halide"];
                         if ((prefix && curr_p<max_priority) || (!prefix && curr_p>=max_priority))
                         {
                             get<0>(sub)=i+1;
@@ -732,7 +702,6 @@ struct compound
                     else if (atoms[a.bonds[j].to].symbol=="C")
                     {
                         curr_p=substituent_priorities["alkyl"];
-
                         if ((prefix && curr_p<max_priority) || (!prefix && curr_p>=max_priority))
                         {
                             get<0>(sub)=i+1;
@@ -748,7 +717,35 @@ struct compound
                     }
                 }
             }
+            groups=findFunctionalGroups(a,out);
+            for (int j=0;j<groups.size();++j)
+            {
+                //cerr<<groups[j]<<" ";
+                curr_p=substituent_priorities[groups[j]];
+                if ((prefix && curr_p<max_priority) || (!prefix && curr_p>=max_priority))
+                {
+                    get<0>(sub)=i+1;
+                    if (want_names)
+                    {
+                        if (groups[j]!="attachment")
+                        {
+                            if (prefix) get<1>(sub)=curr_dict.FGP[groups[j]];
+                            else get<1>(sub)=curr_dict.FGS[groups[j]];
+                        }
+                        else
+                        {
+                            if (prefix) get<1>(sub)=curr_dict.error;
+                            else get<1>(sub)=curr_dict.SS[a.bonds[a.isConnected(out)].spots_taken.size()];
+                        }
+                    }
+                    else get<1>(sub)="";
+                    get<2>(sub)=0;
+                    subs.push_back(sub);
+                }
+            }
+            //cerr<<"; ";
         }
+        //cerr<<endl;
         return subs;
     }
     bool isParentChainCyclic(vector<int> parent_chain)
@@ -782,6 +779,10 @@ struct compound
         {
             show_locants=0;
         }
+        if (most_important && name==curr_dict.FGS["carboxylic acid"] || name==curr_dict.FGS["aldehyde"])
+        {
+            show_locants=0;
+        }
         if ((!cyclic && pos.size()==parent_chain_length-1) || pos.size()==parent_chain_length || (most_important && pos.size()==1 && parent_chain_length==3))
         {
             for (int i=2;i<=3;++i)
@@ -799,6 +800,7 @@ struct compound
         }
         if (show_locants)
         {
+            prefix+='-';
             for (int i=0;i<pos.size();++i)
             {
                 if (i>0) prefix+=',';
@@ -824,7 +826,6 @@ struct compound
             {
                 most_important=0;
                 prefixes+=findGN(curr_pos,curr,curr_carbon,parent_chain_length,cyclic,most_important);
-                prefixes+='-';
                 curr_pos.resize(0);
                 curr_carbon=get<2>(subs[i]);
                 curr=get<1>(subs[i]);
@@ -1295,6 +1296,7 @@ struct compound
         string name="";
         vector<string> suffixes;
         string suffix;
+        string prefix;
         vector<int> parent_chain;
         vector<pair<int, int> > complex_bonds;
         vector<int> double_bonds;
@@ -1303,6 +1305,7 @@ struct compound
         vector<tuple<int, string, bool> > suffix_subs;
         bool cyclic;
         bool most_important;
+        bool benzene;
         parent_chain=findParentChain(in,out);
         parent_chain=directParentChain(parent_chain,out);
         prefix_subs=findSubstituents(parent_chain,out,1,1);
@@ -1316,9 +1319,33 @@ struct compound
             else if (complex_bonds[i].second==3) triple_bonds.push_back(complex_bonds[i].first);
         }
 
+        benzene=0;
+        if (parent_chain.size()==6 && double_bonds.size()==3 && triple_bonds.size()==0 && cyclic)
+        {
+            benzene=1;
+            for (int i=1;i<3;++i)
+            {
+                if (double_bonds[i]-double_bonds[i-1]!=2)
+                {
+                    benzene=0;
+                    break;
+                }
+            }
+        }
+
         most_important=0;
-        if (suffix_subs.empty() && (complex_bonds.empty() || complex_bonds.size()==parent_chain.size() || (!cyclic && complex_bonds.size()==parent_chain.size()-1))) most_important=1;
-        name=findGNs(prefix_subs,parent_chain.size(),cyclic,most_important);
+        if (suffix_subs.empty() && (benzene || complex_bonds.empty() || complex_bonds.size()==parent_chain.size() || (!cyclic && complex_bonds.size()==parent_chain.size()-1))) most_important=1;
+        prefix=findGNs(prefix_subs,parent_chain.size(),cyclic,most_important);
+        if (!prefix.empty() && prefix[0]=='-') prefix=prefix.substr(1,prefix.size()-1);
+
+        name=prefix+name;
+
+        if (benzene)
+        {
+            if (out==-1) name+=curr_dict.benzene;
+            else name+=curr_dict.phen;
+            goto isBenzene;
+        }
 
         if (!double_bonds.empty())
         {
@@ -1342,19 +1369,21 @@ struct compound
             suffixes.push_back(suffix);
         }
 
-        suffix=findGNs(suffix_subs,parent_chain.size(),cyclic,1);
-        suffixes.push_back(suffix);
-
         if (cyclic) name+=curr_dict.CP;
 
         name+=curr_dict.getCNP(parent_chain.size());
+
+        isBenzene:
+
+        suffix=findGNs(suffix_subs,parent_chain.size(),cyclic,1);
+        suffixes.push_back(suffix);
 
         for (int i=0;i<suffixes.size();++i)
         {
             name=addSuffix(name,suffixes[i]);
         }
 
-        if (in!=-1)
+        if (out!=-1)
         {
             if (!prefix_subs.empty()) name="("+name+")";
             else
@@ -2605,8 +2634,17 @@ void setDictionaries()
     English.HP["Br"]="bromo";
     English.HP["I"]="iodo";
 
-    English.FGS["OH"]="ol";
-    English.FGP["OH"]="hydroxy";
+    English.FGS["alcohol"]="ol";
+    English.FGP["alcohol"]="hydroxy";
+    English.FGS["ketone"]="one";
+    English.FGP["ketone"]="oxo";
+    English.FGS["aldehyde"]="al";
+    English.FGP["aldehyde"]="oxo";
+    English.FGS["carboxylic acid"]="oic acid";
+    English.FGP["carboxylic acid"]="carboxy";
+
+    English.benzene="benzene";
+    English.phen="phen";
 
     English.NC="Not Connected";
     English.help="Use the Middle Mouse Button to start or continue chains.\nUse the Left Mouse Button to end chains and to move atoms.";
@@ -2628,8 +2666,17 @@ void setDictionaries()
     Bulgarian.HP["Br"]="бромо";
     Bulgarian.HP["I"]="йодо";
 
-    Bulgarian.FGS["OH"]="ол";
-    Bulgarian.FGP["OH"]="хидрокси";
+    Bulgarian.FGS["alcohol"]="ол";
+    Bulgarian.FGP["alcohol"]="хидрокси";
+    Bulgarian.FGS["ketone"]="он";
+    Bulgarian.FGP["ketone"]="оксо";
+    Bulgarian.FGS["aldehyde"]="ал";
+    Bulgarian.FGP["aldehyde"]="оксо";
+    Bulgarian.FGS["carboxylic acid"]="ова киселина";
+    Bulgarian.FGP["carboxylic acid"]="карбокси";
+
+    Bulgarian.benzene="бензен";
+    Bulgarian.phen="фен";
 
     Bulgarian.NC="Не са свързани";
     Bulgarian.help="Използвайте средния бутон на мишката, за да започнете или продължите вериги.\nИзползвайте левия бутон на мишката, за да завършите вериги\nили да местите атоми.";
