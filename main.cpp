@@ -126,8 +126,8 @@ struct atom
         if (!free_bonds.empty())
         {
             int nc=isConnected(bond);
-            if (nc>=0 && symbol=="C" && bonds[nc].spots_taken.size()==bonds.size()-1) return 0;
-            if (bond!=-1 && nc==-1 && free_bonds.size()<2) return 0;
+            if (symbol=="C" && nc>=0 && bonds[nc].spots_taken.size()==bonds.size()-1) return 0;
+            if (symbol=="O" && bond!=-1 && nc==-1 && free_bonds.size()<2) return 0;
             return 1;
         }
         return 0;
