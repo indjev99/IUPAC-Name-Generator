@@ -1,4 +1,4 @@
-#include "dictionary.h"
+#include "../headers/dictionary.h"
 string dictionary::getCNP(int CN)
 {
     if (CN>=CNP.size())
@@ -13,8 +13,13 @@ string dictionary::getNP(int ST)
     if (ST>=NP.size()) ST=0;
     return NP[ST];
 }
+
+vector<dictionary> dictionaries;
+
 void setDictionaries()
 {
+    dictionary curr_dict;
+
     curr_dict.CNP= {"alka","metha","etha","propa","buta"};
     curr_dict.CBI= {curr_dict.error,"ane","ene","yne"};
     curr_dict.NP= {curr_dict.error,"mono","di","tri","tetra","penta","hexa","hepta","octa","nona",
@@ -39,14 +44,17 @@ void setDictionaries()
     curr_dict.FGS["carboxylic acid"]="oic acid";
     curr_dict.FGP["carboxylic acid"]="carboxy";
 
-    curr_dict.benzene="benzene";
+    curr_dict.benz="benz";
     curr_dict.phen="phen";
+
+    curr_dict.FGS["carbon dioxide"]="carbon dioxide";
+    curr_dict.FGS["carbonic acid"]="carbonic acid";
 
     curr_dict.NC="Not Connected";
     curr_dict.help="Use the Middle Mouse Button to start or continue chains.\nUse the Left Mouse Button to end chains and to move atoms.";
     curr_dict.help+="\nUse the Right mouse button to cancel the current action and remove atoms.\nHold down O, F, C, B or I in order to place aн Oxygen, Fluorine, Chlorine,\nBromine or Iodine atom respectively.";
     curr_dict.help+="\nPress Backspace to undo.\nPress Shift to toggle snapping on and off.\nPress R to reset.\nPress L to change the language.";
-    curr_dict.help+="\nPress N to enter a name of a compound::\nPress H for help.\nPress Escape to end the program.";
+    curr_dict.help+="\nPress N to enter a name of a compound.\nPress H for help.\nPress Escape to end the program.";
     curr_dict.PACTC="Press any key to continue.";
     dictionaries.push_back(curr_dict);
 
@@ -72,8 +80,11 @@ void setDictionaries()
     curr_dict.FGS["carboxylic acid"]="ова киселина";
     curr_dict.FGP["carboxylic acid"]="карбокси";
 
-    curr_dict.benzene="бензен";
+    curr_dict.benz="бенз";
     curr_dict.phen="фен";
+
+    curr_dict.FGS["carbon dioxide"]="въглероден диоксид";
+    curr_dict.FGS["carbonic acid"]="въглеродна киселина";
 
     curr_dict.NC="Не са свързани";
     curr_dict.help="Използвайте средния бутон на мишката, за да започнете или продължите вериги.\nИзползвайте левия бутон на мишката, за да завършите вериги\nили да местите атоми.";

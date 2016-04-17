@@ -1,16 +1,34 @@
 #include<tuple>
 #include<algorithm>
-#include "compound.h"
+#include "../headers/compound.h"
 using namespace std;
+
+const int halogen_N=4;
+const string halogen_symbols[halogen_N]= {"F","Cl","Br","I"};
+unordered_map<string, int> substituent_priorities= {{"alkyl",-1},{"alkyl halide",-1},{"alcohol",1},{"ketone",2},{"aldehyde",3},{"carboxylic acid",4},{"attachment",100},{"carbon dioxide",1000},{"carbonic acid",1000}};
+
 compound::compound()
 {
     changed=1;
 }
-compound::compound(string new_symbol, int new_valance, double new_x, double new_y)
+compound::compound(dictionary new_dict)
 {
     changed=1;
+    curr_dict=new_dict;
+}
+compound::compound(dictionary new_dict, string new_symbol, int new_valance, double new_x, double new_y)
+{
+    changed=1;
+    curr_dict=new_dict;
     addAtom(new_symbol,new_valance,new_x,new_y);
 }
+
+void compound::setDictionary(dictionary new_dict)
+{
+    changed=1;
+    curr_dict=new_dict;
+}
+
 int compound::addAtom(atom& a)
 {
     changed=1;
@@ -230,9 +248,9 @@ vector<int> compound::convertVector(vector<pair<int,int> > a)
 
 bool compound::isHalogen(string s)
 {
-    for (int i=0; i<halogen_symbol.size(); ++i)
+    for (int i=0; i<halogen_N; ++i)
     {
-        if (s==halogen_symbol[i]) return 1;
+        if (s==halogen_symbols[i]) return 1;
     }
     return 0;
 }
@@ -259,7 +277,7 @@ string compound::findGN(vector<int> pos, string name, bool carbon, int parent_ch
     {
         show_locants=0;
     }
-    if (most_important && name==curr_dict.FGS["carboxylic acid"] || name==curr_dict.FGS["aldehyde"])
+    if (most_important && (name==curr_dict.FGS["carboxylic acid"] || name==curr_dict.FGS["aldehyde"]))
     {
         show_locants=0;
     }
@@ -414,7 +432,7 @@ vector<string> compound::findFunctionalGroups(atom a, int out)
         if (a.bonds[i].to==-1 || a.bonds[i].to==out) continue;
         if (atoms[a.bonds[i].to].symbol=="O")
         {
-            if (atoms[a.bonds[i].to].free_bonds.empty())
+            if (a.bonds[i].spots_taken.size()>1)
             {
                 ++carbonyl;
             }
@@ -430,6 +448,17 @@ vector<string> compound::findFunctionalGroups(atom a, int out)
     }
 
     //cerr<<"Carbonyl and hydroxyl: "<<carbonyl<<" "<<hydroxyl<<endl;
+
+    if (carbonyl==2 && hydroxyl==0 && out==-1)
+    {
+        ans.push_back("carbon dioxide");
+        return ans;
+    }
+    if (carbonyl==1 && hydroxyl==2 && out==-1)
+    {
+        ans.push_back("carbonic acid");
+        return ans;
+    }
 
     while (carbonyl || hydroxyl)
     {
@@ -1147,6 +1176,20 @@ string compound::generateName(int in, int out)
         else if (complex_bonds[i].second==3) triple_bonds.push_back(complex_bonds[i].first);
     }
 
+    if (out==-1 && parent_chain.size()==1 && suffix_subs.size()==1 && prefix_subs.empty())
+    {
+        if (get<1>(suffix_subs[0])==curr_dict.FGS["carbonic acid"])
+        {
+            name=curr_dict.FGS["carbonic acid"];
+            goto isInorganic;
+        }
+        if (get<1>(suffix_subs[0])==curr_dict.FGS["carbon dioxide"])
+        {
+            name=curr_dict.FGS["carbon dioxide"];
+            goto isInorganic;
+        }
+    }
+
     benzene=0;
     if (parent_chain.size()==6 && double_bonds.size()==3 && triple_bonds.size()==0 && cyclic)
     {
@@ -1170,7 +1213,7 @@ string compound::generateName(int in, int out)
 
     if (benzene)
     {
-        if (out==-1) name+=curr_dict.benzene;
+        if (out==-1) name+=curr_dict.benz+curr_dict.SS[2];
         else name+=curr_dict.phen;
         goto isBenzene;
     }
@@ -1226,6 +1269,9 @@ isBenzene:
             }
         }
     }
+
+isInorganic:
+
     //cerr<<"FOR IN/OUT: "<<in<<" "<<out<<" name: "<<name<<endl;
     return name;
 }
@@ -1359,9 +1405,9 @@ void compound::setName(string name, double x, double y, double distx, double dis
                     while (i2<name.size() && name[i2]!='-' && name[i2]!=',')
                     {
                         curr+=name[i2];
-                        for (int j=1; j<halogen_symbol.size(); ++j)
+                        for (int j=1; j<halogen_N; ++j)
                         {
-                            p=curr_dict.HP[halogen_symbol[j]];
+                            p=curr_dict.HP[halogen_symbols[j]];
                             if (curr==p)
                             {
                                 curr_num=j;
@@ -1480,7 +1526,7 @@ void compound::setName(string name, double x, double y, double distx, double dis
 
     for (int i=0; i<hal_subs2.size(); ++i)
     {
-        //cerr<<"Halogen substituent: "<<hal_subs2[i].first<<" "<<halogen_symbol[hal_subs2[i].second]<<endl;
+        //cerr<<"Halogen substituent: "<<hal_subs2[i].first<<" "<<halogen_symbols[hal_subs2[i].second]<<endl;
         //cerr<<been_up[hal_subs2[i].first-1]<<endl;
         pr=PC[hal_subs2[i].first-1];
         x2=-(parent_chain/2)*distx+(hal_subs2[i].first-1)*distx+x;
@@ -1493,7 +1539,7 @@ void compound::setName(string name, double x, double y, double distx, double dis
                 been_up[hal_subs2[i].first-1]=2;
             }
             y2+=disty;
-            curr_num=addAtom(halogen_symbol[hal_subs2[i].second],1,x2,y2);
+            curr_num=addAtom(halogen_symbols[hal_subs2[i].second],1,x2,y2);
             connectAtoms(curr_num,pr);
             if (been_up[get<0>(hal_subs2[i])-1]) disty=-disty;
             else been_up[get<0>(hal_subs2[i])-1]=1;
@@ -1508,7 +1554,7 @@ void compound::setName(string name, double x, double y, double distx, double dis
                 been_up[hal_subs2[i].first-1]=4;
             }
             x2+=distx;
-            curr_num=addAtom(halogen_symbol[hal_subs2[i].second],1,x2,y2);
+            curr_num=addAtom(halogen_symbols[hal_subs2[i].second],1,x2,y2);
             connectAtoms(curr_num,pr);
             if (hal_subs2[i].first-1==0) distx=-distx;
             if (been_up[hal_subs2[i].first-1]>2) distx=-distx;

@@ -1,4 +1,4 @@
-#include "atom.h"
+#include "../headers/atom.h"
 atom::atom() {}
 atom::atom(string new_symbol, int new_valance, double new_x, double new_y)
 {
@@ -48,7 +48,6 @@ bool atom::canConnect(int bond)
     {
         int nc=isConnected(bond);
         if (symbol=="C" && nc>=0 && bonds[nc].spots_taken.size()==bonds.size()-1) return 0;
-        if (symbol=="O" && bond!=-1 && nc==-1 && free_bonds.size()<2) return 0;
         return 1;
     }
     return 0;

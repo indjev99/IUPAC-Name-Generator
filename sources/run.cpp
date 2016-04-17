@@ -1,10 +1,21 @@
-#include<deque>
-#include "compound.h"
-#include "window_functions.cpp"
+#include<iostream>
+#include<math.h>
+#include<stdlib.h>
+#include "../headers/compound.h"
+#include "../headers/window_functions.h"
+#include "../headers/run.h"
 using namespace std;
+
+const string element_symbol[]= {"H","C","O","F","Cl","Br","I"};
+const int element_valence[]= {1,4,2,1,1,1,1};
 int curr_dict_N=0;
-const vector<string> element_symbol= {"H","C","O","F","Cl","Br","I"};
-const vector<int> element_valence= {1,4,2,1,1,1,1};
+
+void help()
+{
+    system("cls");
+    cout<<dictionaries[curr_dict_N].help<<endl;
+}
+
 void snap(double& x, double& y)
 {
     double hx,lx;
@@ -26,7 +37,7 @@ void run(GLFWwindow* w)
     sx=0;
     sy=0;
     if (snappingEnabled) snap(sx,sy);
-    compound c(element_symbol[1],element_valence[1],sx,sy);
+    compound c(dictionaries[curr_dict_N],element_symbol[1],element_valence[1],sx,sy);
     deque<compound> history= {c};
     int last2=-1;
     int last=-1;
@@ -65,7 +76,7 @@ void run(GLFWwindow* w)
             sx=0;
             sy=0;
             if (snappingEnabled) snap(sx,sy);
-            c=*(new compound(element_symbol[1],element_valence[1],sx,sy));
+            c=*(new compound(dictionaries[curr_dict_N],element_symbol[1],element_valence[1],sx,sy));
             history.push_back(c);
             //BACKGROUND_COLOUR_R2=!BACKGROUND_COLOUR_R2;
         }
@@ -73,7 +84,7 @@ void run(GLFWwindow* w)
         {
             ++curr_dict_N;
             curr_dict_N%=dictionaries.size();
-            curr_dict=dictionaries[curr_dict_N];
+            c.setDictionary(dictionaries[curr_dict_N]);
         }
         if (pressed==-7)
         {

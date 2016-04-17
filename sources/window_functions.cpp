@@ -1,14 +1,19 @@
+#include<iostream>
 #include<GLFW/glfw3.h>
-#include "compound.h"
-#include "window_size.h"
-#include "draw.cpp"
-double mxpos=0,mypos=0;
+#include "../headers/compound.h"
+#include "../headers/window_size.h"
+#include "../headers/draw.h"
+#include "../headers/window_functions.h"
+
+double mxpos=0;
+double mypos=0;
 int pressed;
 bool selected_element[16];
 bool snappingEnabled=1;
+
 void error_callback(int error, const char* description)
 {
-    cout<<error<<": "<<description<<endl;
+    cerr<<error<<": "<<description<<endl;
 }
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {

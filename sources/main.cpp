@@ -1,15 +1,15 @@
 //IUPAC Name Generator
 #include<iostream>
 #include<conio.h>
-#include "dictionary.cpp"
-#include "atom.cpp"
-#include "compound.cpp"
-#include "window_functions.cpp"
-#include "run.cpp"
+#include<stdlib.h>
+#include "../headers/dictionary.h"
+#include "../headers/atom.h"
+#include "../headers/compound.h"
+#include "../headers/window_functions.h"
+#include "../headers/run.h"
 using namespace std;
+
 GLFWwindow *window;
-
-
 
 int main()
 {
@@ -19,7 +19,7 @@ int main()
     setDictionaries();
 
     help();
-    cout<<curr_dict.PACTC<<endl;
+    cout<<dictionaries[curr_dict_N].PACTC<<endl;
     getch();
 
     system("cls");

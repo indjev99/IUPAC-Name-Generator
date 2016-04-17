@@ -1,10 +1,11 @@
-#include<GLFW/glfw3.h>
 #include<math.h>
 #include<vector>
-#include "atom.h"
-#include "compound.h"
-#include "window_size.h"
+#include "../headers/atom.h"
+#include "../headers/compound.h"
+#include "../headers/window_size.h"
+#include "../headers/draw.h"
 using namespace std;
+
 const double DEG2RAD=3.14159/180.0;
 const double TEXT_COLOUR_R=0;
 const double TEXT_COLOUR_G=0;
@@ -13,6 +14,7 @@ const double BACKGROUND_COLOUR_R=1;
 const double BACKGROUND_COLOUR_R2=1;
 const double BACKGROUND_COLOUR_G=1;
 const double BACKGROUND_COLOUR_B=1;
+
 void drawPartEllipse(float x, float y, float radiusX, float radiusY, double alpha, double beta)
 {
     alpha=round(alpha*2);
@@ -315,6 +317,7 @@ double drawSymbol1(char symbol, double x, double y, bool centered)
         glEnd();
         return x+0.03625*scale;
     }
+    return x;
 }
 double drawSymbol(string symbol, double x, double y, bool centered)
 {

@@ -1,6 +1,7 @@
 #ifndef DICTIONARY_H_INCLUDED
 #define DICTIONARY_H_INCLUDED
 #include<vector>
+#include<string>
 #include<stack>
 #include<unordered_map>
 using namespace std;
@@ -18,12 +19,14 @@ struct dictionary
     unordered_map<string, string> HP; //halogen_prefixes
     unordered_map<string, string> FGP; //functional_group_prefixes
     unordered_map<string, string> FGS; //functional_group_suffixes
-    string benzene;
+    string benz;
     string phen;
 
     string getCNP(int CN);
     string getNP(int ST);
 };
-dictionary curr_dict;
-vector<dictionary> dictionaries;
+
+extern vector<dictionary> dictionaries;
+
+void setDictionaries();
 #endif //DICTIONARY_H_INCLUDED

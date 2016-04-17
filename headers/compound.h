@@ -2,20 +2,28 @@
 #define COMPOUND_H_INCLUDED
 #include<vector>
 #include<stack>
+#include<string>
 #include "dictionary.h"
 #include "atom.h"
 using namespace std;
-const vector<string> halogen_symbol= {"F","Cl","Br","I"};
-unordered_map<string, int> substituent_priorities= {{"alkyl",-1},{"alkyl halide",-1},{"alcohol",1},{"ketone",2},{"aldehyde",3},{"carboxylic acid",4},{"attachment",100}};
+
+extern const int halogen_N;
+extern const string halogen_symbols[];
+extern unordered_map<string, int> substituent_priorities;
+
 struct compound
 {
     vector<atom> atoms;
     stack<int> free_positions;
     string name;
     bool changed;
+    dictionary curr_dict;
 
     compound();
-    compound(string new_symbol, int new_valance, double new_x, double new_y);
+    compound(dictionary new_dict);
+    compound(dictionary new_dict, string new_symbol, int new_valance, double new_x, double new_y);
+
+    void setDictionary (dictionary new_dict);
 
     int addAtom(atom& a);
     int addAtom(string new_symbol, int new_valance, double new_x, double new_y);
@@ -34,8 +42,9 @@ struct compound
     static vector<int> convertVector(vector<pair<int,int> > a);
 
     static bool isHalogen(string s);
-    static string findGN(vector<int> pos, string name, bool carbon, int parent_chain_length, bool cyclic, bool most_important); //find group's name
-    static string findGNs(vector<tuple<int, string, bool> > subs, int parent_chain_length, bool cyclic, bool most_important); //find groups' names
+
+    string findGN(vector<int> pos, string name, bool carbon, int parent_chain_length, bool cyclic, bool most_important); //find group's name
+    string findGNs(vector<tuple<int, string, bool> > subs, int parent_chain_length, bool cyclic, bool most_important); //find groups' names
 
     bool isConnected();
     int findAtomInCycle(int in, int out);

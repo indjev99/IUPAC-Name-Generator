@@ -46,7 +46,23 @@
 			<Add library="opengl32" />
 			<Add directory="lib-mingw" />
 		</Linker>
-		<Unit filename="main.cpp" />
+		<Unit filename="headers/atom.h" />
+		<Unit filename="headers/bond.h" />
+		<Unit filename="headers/compound.h" />
+		<Unit filename="headers/dictionary.h" />
+		<Unit filename="headers/draw.h" />
+		<Unit filename="headers/run.h" />
+		<Unit filename="headers/window_functions.h" />
+		<Unit filename="headers/window_size.h" />
+		
+		<Unit filename="sources/atom.cpp" />
+		<Unit filename="sources/compound.cpp" />
+		<Unit filename="sources/dictionary.cpp" />
+		<Unit filename="sources/draw.cpp" />
+		<Unit filename="sources/main.cpp" />
+		<Unit filename="sources/run.cpp" />
+		<Unit filename="sources/window_functions.cpp" />
+		<Unit filename="sources/window_size.cpp" />
 		<Extensions>
 			<code_completion />
 			<envvars />
