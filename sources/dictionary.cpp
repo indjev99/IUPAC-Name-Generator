@@ -45,7 +45,7 @@ void setDictionaries()
     curr_dict.FGP["carboxylic acid"]="carboxy";
 
     curr_dict.benz="benz";
-    curr_dict.phen="phen";
+    curr_dict.pheno="pheno";
 
     curr_dict.FGS["carbon dioxide"]="carbon dioxide";
     curr_dict.FGS["carbonic acid"]="carbonic acid";
@@ -81,7 +81,7 @@ void setDictionaries()
     curr_dict.FGP["carboxylic acid"]="карбокси";
 
     curr_dict.benz="бенз";
-    curr_dict.phen="фен";
+    curr_dict.pheno="фенo";
 
     curr_dict.FGS["carbon dioxide"]="въглероден диоксид";
     curr_dict.FGS["carbonic acid"]="въглеродна киселина";

@@ -1,3 +1,4 @@
+#include<iostream>
 #include<tuple>
 #include<algorithm>
 #include "../headers/compound.h"
@@ -74,14 +75,14 @@ int compound::connectAtoms(int a1, int a2)
     changed=1;
     if (a1<atoms.size() && a2<atoms.size() && a1!=a2 && atoms[a1].symbol!="" && atoms[a2].symbol!="" && atoms[a1].canConnect(a2) && atoms[a2].canConnect(a1))
     {
-        if (a!=-1)
+        /*if (a!=-1)
         {
             prev=findPathFrom(a1,-1,0);
             if (prev[a2]!=-2 && atoms[a1].isConnected(a2)==-1)
             {
                 return -1;
             }
-        }
+        }*/
         atoms[a1].connect(a2);
         atoms[a2].connect(a1);
         return 1;
@@ -254,7 +255,7 @@ bool compound::isHalogen(string s)
     }
     return 0;
 }
-string compound::findGN(vector<int> pos, string name, bool carbon, int parent_chain_length, bool cyclic, bool most_important) //find group's name
+string compound::findGN(vector<int> pos, string name, bool carbon, int parent_chain_length, bool cyclic, bool benzene, bool most_important) //find group's name
 {
     string prefix="";
     bool show_locants=1;
@@ -296,6 +297,10 @@ string compound::findGN(vector<int> pos, string name, bool carbon, int parent_ch
     {
         show_locants=0;
     }
+    if (benzene && pos.size()==parent_chain_length)
+    {
+        show_locants=0;
+    }
     if (show_locants)
     {
         prefix+='-';
@@ -310,7 +315,7 @@ string compound::findGN(vector<int> pos, string name, bool carbon, int parent_ch
     prefix+=name;
     return prefix;
 }
-string compound::findGNs(vector<tuple<int, string, bool> > subs, int parent_chain_length, bool cyclic, bool most_important)//find groups' names
+string compound::findGNs(vector<tuple<int, string, bool> > subs, int parent_chain_length, bool cyclic, bool benzene, bool most_important)//find groups' names
 {
     string prefixes="";
     vector<int> curr_pos;
@@ -323,14 +328,14 @@ string compound::findGNs(vector<tuple<int, string, bool> > subs, int parent_chai
         if (get<1>(subs[i])!=curr)
         {
             most_important=0;
-            prefixes+=findGN(curr_pos,curr,curr_carbon,parent_chain_length,cyclic,most_important);
+            prefixes+=findGN(curr_pos,curr,curr_carbon,parent_chain_length,cyclic,benzene,most_important);
             curr_pos.resize(0);
             curr_carbon=get<2>(subs[i]);
             curr=get<1>(subs[i]);
         }
         curr_pos.push_back(get<0>(subs[i]));
     }
-    prefixes+=findGN(curr_pos,curr,curr_carbon,parent_chain_length,cyclic,most_important);
+    prefixes+=findGN(curr_pos,curr,curr_carbon,parent_chain_length,cyclic,benzene,most_important);
     return prefixes;
 }
 
@@ -344,7 +349,7 @@ bool compound::isConnected()
     for (int i=0; i<atoms.size(); ++i)
     {
         vis[i]=0;
-        if (s==-1 && atoms[i].symbol=="C")
+        if (s==-1 && atoms[i].symbol!="")
         {
             s=i;
             break;
@@ -363,7 +368,7 @@ bool compound::isConnected()
             s=a.bonds[i].to;
             if (s!=-1 && !vis[s])
             {
-                if (atoms[s].symbol=="C") st.push(s);
+                if (atoms[s].symbol!="" ) st.push(s);
                 vis[s]=1;
             }
         }
@@ -406,7 +411,7 @@ int compound::findAtomInCycle(int in, int out)
         for (int i=0; i<a.bonds.size(); ++i)
         {
             s2=a.bonds[i].to;
-            if (s2!=-1 && atoms[s2].symbol=="C" && s2!=out)
+            if (s2!=-1 && atoms[s2].symbol=="C" && s2!=out && atoms_unions[s2]==atoms_unions[s])
             {
                 if (!vis[s2])
                 {
@@ -533,7 +538,7 @@ pair<vector<int>, vector<int> > compound::findFarthest(int s, int out)
         for (int i=0; i<a.bonds.size(); ++i)
         {
             s=a.bonds[i].to;
-            if (s!=-1 && atoms[s].symbol=="C" && !vis[s] && s!=out)
+            if (s!=-1 && atoms[s].symbol=="C" && !vis[s] && s!=out && atoms_unions[s]==atoms_unions[curr.first])
             {
                 curr.first=s;
                 vis[s]=1;
@@ -577,7 +582,7 @@ vector<int> compound::findPathFrom(int s, int out, bool cycle)
         for (int i=0; i<a.bonds.size(); ++i)
         {
             s2=a.bonds[i].to;
-            if (s2!=-1 && atoms[s2].symbol=="C"&& s2!=out)
+            if (s2!=-1 && atoms[s2].symbol=="C" && s2!=out && atoms_unions[s2]==atoms_unions[s])
             {
                 if (prev[s2]==-2)
                 {
@@ -933,6 +938,149 @@ vector<int> compound::directParentChain(vector<int> parent_chain, int out)
     else parent_chain=directAcyclicParentChain(parent_chain,out);
     return parent_chain;
 }
+void compound::findCyclicUnions(int in)
+{
+    if (atoms[in].symbol!="C") return;
+    if (atoms_unions[in]!=-1) return;
+
+    atom a;
+    int s=in;
+    int s2;
+    stack<pair<int, int> > st;
+    pair<int, int> curr;
+    vector<int> prev;
+    vector<int> in_union;
+
+    int cycle=-1;
+
+    prev.resize(atoms.size());
+    for (int i=0; i<prev.size(); ++i) prev[i]=-2;
+    st.push(make_pair(s,-1));
+
+
+    while (!st.empty())
+    {
+        curr=st.top();
+        st.pop();
+        s=curr.first;
+        if (prev[s]!=-2) continue;
+        prev[s]=curr.second;
+        a=atoms[s];
+        for (int i=0; i<a.bonds.size(); ++i)
+        {
+            s2=a.bonds[i].to;
+            if (s2!=-1 && atoms[s2].symbol=="C" && atoms_unions[s2]==-1)
+            {
+                if (prev[s2]!=-2 && prev[s]!=s2)
+                {
+                    prev[s2]=s;
+                    cycle=s2;
+                    break;
+                }
+                else if (prev[s2]==-2)
+                {
+                    st.push(make_pair(s2,s));
+                }
+            }
+        }
+        if (cycle!=-1) break;
+    }
+    if (cycle==-1) return;
+    s2=atom_in_union.size();
+    atom_in_union.push_back(cycle);
+    s=cycle;
+    do
+    {
+        in_union.push_back(s);
+        atoms_unions[s]=s2;
+        s=prev[s];
+    }
+    while (s>=0 && s!=cycle);
+    ///TODO Deal with multicylce unions
+
+}
+void compound::findAcyclicUnions(int in)
+{
+    //cerr<<endl<<" IN: "<<in<<endl;
+
+    if (atoms[in].symbol!="C") return;
+    if (atoms_unions[in]!=-1) return;
+
+    atom a;
+    int s=in;
+    int s2;
+    stack<int> st;
+    vector<bool> vis;
+    vector<int> touched_unions(atom_in_union.size());
+    vector<int> in_union;
+
+    vis.resize(atoms.size());
+    for (int i=0; i<vis.size(); ++i) vis[i]=0;
+    for (int i=0; i<touched_unions.size(); ++i) touched_unions[i]=0;
+    vis[s]=1;
+    st.push(s);
+    in_union.push_back(s);
+
+
+    while (!st.empty())
+    {
+        s=st.top();
+        st.pop();
+        a=atoms[s];
+        for (int i=0; i<a.bonds.size(); ++i)
+        {
+            s2=a.bonds[i].to;
+            if (s2!=-1 && atoms[s2].symbol=="C" && !vis[s2])
+            {
+                if (atoms_unions[s2]==-1)
+                {
+                    vis[s2]=1;
+                    st.push(s2);
+                    in_union.push_back(s2);
+                }
+                else
+                {
+                    ++touched_unions[atoms_unions[s2]];
+                }
+            }
+        }
+    }
+    s2=-1;
+    for (int i=0; i<touched_unions.size(); ++i)
+    {
+        if (touched_unions[i]>=2)
+        {
+            s2=i;
+            break;
+        }
+    }
+    if (s2==-1)
+    {
+        s2=atom_in_union.size();
+        atom_in_union.push_back(in_union[0]);
+    }
+    for (int i=0; i<in_union.size(); ++i)
+    {
+        atoms_unions[in_union[i]]=s2;
+    }
+}
+void compound::findUnions()
+{
+    atoms_unions.resize(atoms.size());
+    atom_in_union.resize(0);
+    for (int i=0; i<atoms_unions.size(); ++i)
+    {
+        atoms_unions[i]=-1;
+    }
+    for (int i=0; i<atoms.size(); ++i)
+    {
+        findCyclicUnions(i);
+    }
+    for (int i=0; i<atoms.size(); ++i)
+    {
+        findAcyclicUnions(i);
+    }
+}
 vector<int> compound::findParentChain(int in, int out)
 {
     pair<vector<int>, vector<int>> candidates,candidates2;
@@ -957,6 +1105,17 @@ vector<int> compound::findParentChain(int in, int out)
         maxDist[i]=0;
     }
     int starting_atom;
+
+
+    if (in==-1)
+    {
+        findUnions();
+    }
+    else
+    {
+        //stuff
+    }
+
     starting_atom=findAtomInCycle(in,out);
     if (starting_atom==-1)
     {
@@ -1131,11 +1290,11 @@ vector<int> compound::findParentChain(int in, int out)
     else
     {
         parent_chain.resize(0);
-        if (in!=-1)
+        /*if (in!=-1)
         {
             parent_chain.push_back(in);
             return parent_chain;
-        }
+        }*/
         prev=findPathFrom(starting_atom,out,1);
         curr=starting_atom;
         do
@@ -1206,15 +1365,15 @@ string compound::generateName(int in, int out)
 
     most_important=0;
     if (suffix_subs.empty() && (benzene || complex_bonds.empty() || complex_bonds.size()==parent_chain.size() || (!cyclic && complex_bonds.size()==parent_chain.size()-1))) most_important=1;
-    prefix=findGNs(prefix_subs,parent_chain.size(),cyclic,most_important);
+    prefix=findGNs(prefix_subs,parent_chain.size(),cyclic,benzene,most_important);
     if (!prefix.empty() && prefix[0]=='-') prefix=prefix.substr(1,prefix.size()-1);
 
     name=prefix+name;
 
     if (benzene)
     {
-        if (out==-1) name+=curr_dict.benz+curr_dict.SS[2];
-        else name+=curr_dict.phen;
+        if (suffix_subs.empty()) name+=curr_dict.benz+curr_dict.CBI[2];
+        else name+=curr_dict.pheno;
         goto isBenzene;
     }
 
@@ -1222,7 +1381,7 @@ string compound::generateName(int in, int out)
     {
         most_important=0;
         if (suffix_subs.empty() && triple_bonds.empty()) most_important=1;
-        suffix=findGN(double_bonds,curr_dict.CBI[2],0,parent_chain.size(),cyclic,most_important);
+        suffix=findGN(double_bonds,curr_dict.CBI[2],0,parent_chain.size(),cyclic,benzene,most_important);
         suffixes.push_back(suffix);
     }
 
@@ -1230,7 +1389,7 @@ string compound::generateName(int in, int out)
     {
         most_important=0;
         if (suffix_subs.empty() && double_bonds.empty()) most_important=1;
-        suffix=findGN(triple_bonds,curr_dict.CBI[3],0,parent_chain.size(),cyclic,most_important);
+        suffix=findGN(triple_bonds,curr_dict.CBI[3],0,parent_chain.size(),cyclic,benzene,most_important);
         suffixes.push_back(suffix);
     }
 
@@ -1244,9 +1403,9 @@ string compound::generateName(int in, int out)
 
     name+=curr_dict.getCNP(parent_chain.size());
 
-isBenzene:
+    isBenzene:
 
-    suffix=findGNs(suffix_subs,parent_chain.size(),cyclic,1);
+    suffix=findGNs(suffix_subs,parent_chain.size(),cyclic,benzene,1);
     suffixes.push_back(suffix);
 
     for (int i=0; i<suffixes.size(); ++i)
@@ -1270,8 +1429,9 @@ isBenzene:
         }
     }
 
-isInorganic:
+    isInorganic:
 
+    //cerr<<"FOR IN/OUT: "<<in<<" "<<out<<" name: "<<name<<endl;
     //cerr<<"FOR IN/OUT: "<<in<<" "<<out<<" name: "<<name<<endl;
     return name;
 }

@@ -7,9 +7,9 @@
 using namespace std;
 
 const double DEG2RAD=3.14159/180.0;
-const double TEXT_COLOUR_R=0;
-const double TEXT_COLOUR_G=0;
-const double TEXT_COLOUR_B=0;
+double TEXT_COLOUR_R=0;
+double TEXT_COLOUR_G=0;
+double TEXT_COLOUR_B=0;
 const double BACKGROUND_COLOUR_R=1;
 const double BACKGROUND_COLOUR_R2=1;
 const double BACKGROUND_COLOUR_G=1;
@@ -628,8 +628,24 @@ void drawBond(double x1, double y1, double x2, double y2, int num)
     }
     glEnd();
 }
+void setTextColour(int n)
+{
+    int d;
+    ++n;
+    n%=7;
+    d=n%2;
+    n/=2;
+    TEXT_COLOUR_R=d;
+    d=n%2;
+    n/=2;
+    TEXT_COLOUR_G=d;
+    d=n%2;
+    n/=2;
+    TEXT_COLOUR_B=d;
+}
 void drawCompound(GLFWwindow* w, compound& c)
 {
+    int p;
     double proportion=1.0*WINDOWS_WIDTH/WINDOWS_HEIGHT;
     atom a,a2;
 
@@ -650,6 +666,7 @@ void drawCompound(GLFWwindow* w, compound& c)
     {
         a=c.atoms[i];
         if (a.symbol=="") continue;
+        setTextColour(-1);
         for (int i=0; i<a.bonds.size(); ++i)
         {
             if (a.bonds[i].to!=-1)
@@ -664,6 +681,9 @@ void drawCompound(GLFWwindow* w, compound& c)
     {
         a=c.atoms[i];
         if (a.symbol=="") continue;
+        p=-1;
+        if (i<c.atoms_unions.size()) p=c.atoms_unions[i];
+        //setTextColour(p);
         drawAtom(a);
     }
 }
