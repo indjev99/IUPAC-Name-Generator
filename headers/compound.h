@@ -19,6 +19,10 @@ struct compound
     bool changed;
     dictionary curr_dict;
 
+    vector<int> atoms_unions;
+    vector<int> atom_in_union;
+    vector<bool> unions_cycle;
+
     compound();
     compound(dictionary new_dict);
     compound(dictionary new_dict, string new_symbol, int new_valance, double new_x, double new_y);
@@ -43,8 +47,8 @@ struct compound
 
     static bool isHalogen(string s);
 
-    string findGN(vector<int> pos, string name, bool carbon, int parent_chain_length, bool cyclic, bool most_important); //find group's name
-    string findGNs(vector<tuple<int, string, bool> > subs, int parent_chain_length, bool cyclic, bool most_important); //find groups' names
+    string findGN(vector<int> pos, string name, bool carbon, int parent_chain_length, bool cyclic, bool benzene, bool most_important); //find group's name
+    string findGNs(vector<tuple<int, string, bool> > subs, int parent_chain_length, bool cyclic, bool benzene, bool most_important); //find groups' names
 
     bool isConnected();
     int findAtomInCycle(int in, int out);
@@ -58,6 +62,9 @@ struct compound
     vector<int> directAcyclicParentChain(vector<int> parent_chain, int out);
     vector<int> directCyclicParentChain(vector<int> parent_chain, int out);
     vector<int> directParentChain(vector<int> parent_chain, int out);
+    void findCyclicUnions(int in);
+    void findAcyclicUnions(int in);
+    void findUnions();
     vector<int> findParentChain(int in, int out);
     string generateName(int in, int out);
     string getName();

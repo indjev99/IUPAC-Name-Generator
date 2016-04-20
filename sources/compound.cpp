@@ -70,19 +70,18 @@ int compound::addAtom(string new_symbol, int new_valance, double new_x, double n
 }
 int compound::connectAtoms(int a1, int a2)
 {
-    int a=findAtomInCycle(-1,-1);
-    vector<int> prev;
+    vector<int> prev=findPathFrom(a1,-1,1);
+    int a=prev[a2];
     changed=1;
     if (a1<atoms.size() && a2<atoms.size() && a1!=a2 && atoms[a1].symbol!="" && atoms[a2].symbol!="" && atoms[a1].canConnect(a2) && atoms[a2].canConnect(a1))
     {
-        /*if (a!=-1)
+        if (atoms_unions.size()>a1 && atoms_unions.size()>a2 && atoms[a1].symbol=="C" && atoms[a2].symbol=="C")
         {
-            prev=findPathFrom(a1,-1,0);
-            if (prev[a2]!=-2 && atoms[a1].isConnected(a2)==-1)
+            if ((unions_cycle[atoms_unions[a1]] || unions_cycle[atoms_unions[a2]]) && atoms[a1].isConnected(a2)==-1 && a!=-1)
             {
                 return -1;
             }
-        }*/
+        }
         atoms[a1].connect(a2);
         atoms[a2].connect(a1);
         return 1;
@@ -293,7 +292,7 @@ string compound::findGN(vector<int> pos, string name, bool carbon, int parent_ch
             }
         }
     }
-    if (parent_chain_length<4 && carbon)
+    if (!cyclic && parent_chain_length<4 && carbon)
     {
         show_locants=0;
     }
@@ -482,6 +481,7 @@ vector<string> compound::findFunctionalGroups(atom a, int out)
 }
 pair<vector<int>, vector<int> > compound::findFarthest(int s, int out)
 {
+    int in=s;
     vector<int> max_dist_atoms;
     pair<vector<int>, vector<int> > ans;
     vector<int> max_dist;
@@ -490,6 +490,7 @@ pair<vector<int>, vector<int> > compound::findFarthest(int s, int out)
     vector<bool> vis;
     pair<int, vector<int>> curr;
     int f;
+    int s2;
     int priority;
     vector<string> groups;
     vis.resize(atoms.size());
@@ -508,7 +509,8 @@ pair<vector<int>, vector<int> > compound::findFarthest(int s, int out)
     {
         curr=st.top();
         st.pop();
-        a=atoms[curr.first];
+        s2=curr.first;
+        a=atoms[s2];
         --curr.second[2];
         priority=1;
         groups=findFunctionalGroups(a,out);
@@ -538,7 +540,7 @@ pair<vector<int>, vector<int> > compound::findFarthest(int s, int out)
         for (int i=0; i<a.bonds.size(); ++i)
         {
             s=a.bonds[i].to;
-            if (s!=-1 && atoms[s].symbol=="C" && !vis[s] && s!=out && atoms_unions[s]==atoms_unions[curr.first])
+            if (s!=-1 && atoms[s].symbol=="C" && !vis[s] && s!=out && atoms_unions[s]==atoms_unions[s2])
             {
                 curr.first=s;
                 vis[s]=1;
@@ -557,6 +559,9 @@ pair<vector<int>, vector<int> > compound::findFarthest(int s, int out)
             }
         }
     }
+    /*cerr<<"Farthest from: "<<in<<endl;
+    for (int i=0;i<max_dist_atoms.size();++i) cerr<<max_dist_atoms[i]<<" ";
+    cerr<<endl<<"DIST: "<<max_dist[2]<<endl;*/
     ans.first=max_dist_atoms;
     ans.second=max_dist;
     return ans;
@@ -656,7 +661,8 @@ vector<tuple<int, string, bool> > compound::findSubstituents(vector<int> parent_
         a=atoms[parent_chain[i]];
         for (int j=0; j<a.bonds.size(); ++j)
         {
-            if (a.bonds[j].to!=-1 && a.bonds[j].to!=parent_chain[(i-1+PCS)%PCS] && a.bonds[j].to!=parent_chain[(i+1)%PCS])
+            if (a.bonds[j].to!=-1 && ((unions_cycle[atoms_unions[parent_chain[i]]] && atoms_unions[a.bonds[j].to]!=atoms_unions[parent_chain[i]]) ||
+                                      (!unions_cycle[atoms_unions[parent_chain[i]]] && (i==0 || a.bonds[j].to!=parent_chain[i-1]) && (i==PCS-1 || a.bonds[j].to!=parent_chain[i+1]))))
             {
                 if (a.bonds[j].to==out);
                 else if (isHalogen(atoms[a.bonds[j].to].symbol))
@@ -988,6 +994,7 @@ void compound::findCyclicUnions(int in)
     if (cycle==-1) return;
     s2=atom_in_union.size();
     atom_in_union.push_back(cycle);
+    unions_cycle.push_back(1);
     s=cycle;
     do
     {
@@ -1058,6 +1065,7 @@ void compound::findAcyclicUnions(int in)
     {
         s2=atom_in_union.size();
         atom_in_union.push_back(in_union[0]);
+        unions_cycle.push_back(0);
     }
     for (int i=0; i<in_union.size(); ++i)
     {
@@ -1068,6 +1076,7 @@ void compound::findUnions()
 {
     atoms_unions.resize(atoms.size());
     atom_in_union.resize(0);
+    unions_cycle.resize(0);
     for (int i=0; i<atoms_unions.size(); ++i)
     {
         atoms_unions[i]=-1;
@@ -1080,6 +1089,10 @@ void compound::findUnions()
     {
         findAcyclicUnions(i);
     }
+    /*for (int i=0; i<atom_in_union.size(); ++i)
+    {
+        cerr<<"I: "<<i<<" atom_in_union: "<<atom_in_union[i]<<" UNIONS_CYCLE: "<<unions_cycle[i]<<endl;
+    }*/
 }
 vector<int> compound::findParentChain(int in, int out)
 {
@@ -1098,42 +1111,45 @@ vector<int> compound::findParentChain(int in, int out)
     vector<int> a1;
     int curr;
     int f;
+    int starting_atom;
     vector<int> maxDist;
     maxDist.resize(5);
     for (int i=0; i<5; ++i)
     {
         maxDist[i]=0;
     }
-    int starting_atom;
-
 
     if (in==-1)
     {
         findUnions();
-    }
-    else
-    {
-        //stuff
+        for (int i=0; i<atom_in_union.size(); ++i)
+        {
+            parent_chain=directParentChain(findParentChain(atom_in_union[i],-1),out);
+            /*cerr<<"UNION: "<<i<<endl;
+            for (int i=0; i<parent_chain.size(); ++i)
+            {
+                cerr<<parent_chain[i]<<" ";
+            }
+            cerr<<endl;*/
+            candidateParentChains2.push_back(parent_chain);
+        }
+        goto selectBetweenParentChains;
     }
 
-    starting_atom=findAtomInCycle(in,out);
+    //cerr<<"IN: "<<in<<" OUT: "<<out<<endl;
+    //cerr<<"INUNION: "<<atoms_unions[in]<<" CYCLE: "<<unions_cycle[atoms_unions[in]]<<endl;
+
+    starting_atom=-1;
+    if (unions_cycle[atoms_unions[in]])
+    {
+        starting_atom=in;
+    }
+
+    //cerr<<"SA: "<<starting_atom<<endl;
+
     if (starting_atom==-1)
     {
-        if (in==-1)
-        {
-            for (int i=0; i<atoms.size(); ++i)
-            {
-                if (atoms[i].symbol=="C")
-                {
-                    starting_atom=i;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            starting_atom=in;
-        }
+        starting_atom=in;
         candidates=findFarthest(starting_atom,out);
         for (int i=0; i<candidates.first.size(); ++i)
         {
@@ -1181,6 +1197,8 @@ vector<int> compound::findParentChain(int in, int out)
             }
         }
 
+selectBetweenParentChains:
+
         candidateParentChains.resize(0);
         maxx.resize(0);
         for (int i=0; i<candidateParentChains2.size(); ++i)
@@ -1188,6 +1206,46 @@ vector<int> compound::findParentChain(int in, int out)
             parent_chain=candidateParentChains2[i];
             subs=findSubstituents(parent_chain,out,0,0);
             a1=convertVector(subs);
+            f=cmpVectors(a1,maxx);
+            if (f==1)
+            {
+                f=0;
+                candidateParentChains.resize(0);
+                maxx=a1;
+            }
+            if (f==0)
+            {
+                candidateParentChains.push_back(parent_chain);
+            }
+        }
+
+        candidateParentChains2.resize(0);
+        maxx.resize(0);
+        for (int i=0; i<candidateParentChains.size(); ++i)
+        {
+            parent_chain=candidateParentChains[i];
+            a1.resize(0);
+            a1.push_back(-unions_cycle[atoms_unions[parent_chain[0]]]);
+            f=cmpVectors(a1,maxx);
+            if (f==1)
+            {
+                f=0;
+                candidateParentChains2.resize(0);
+                maxx=a1;
+            }
+            if (f==0)
+            {
+                candidateParentChains2.push_back(parent_chain);
+            }
+        }
+
+        candidateParentChains.resize(0);
+        maxx.resize(0);
+        for (int i=0; i<candidateParentChains2.size(); ++i)
+        {
+            parent_chain=candidateParentChains2[i];
+            a1.resize(0);
+            a1.push_back(-parent_chain.size());
             f=cmpVectors(a1,maxx);
             if (f==1)
             {
@@ -1304,6 +1362,17 @@ vector<int> compound::findParentChain(int in, int out)
         }
         while (curr!=starting_atom);
     }
+
+    /*cerr<<"END: "<<endl;
+    cerr<<"IN: "<<in<<" OUT: "<<out<<endl;
+    //cerr<<"INUNION: "<<atoms_unions[in]<<" CYCLE: "<<unions_cycle[atoms_unions[in]]<<endl;
+
+    for (int i=0; i<parent_chain.size(); ++i)
+    {
+        cerr<<parent_chain[i]<<" ";
+    }
+    cerr<<endl;*/
+
     return parent_chain;
 }
 string compound::generateName(int in, int out)
@@ -1403,7 +1472,7 @@ string compound::generateName(int in, int out)
 
     name+=curr_dict.getCNP(parent_chain.size());
 
-    isBenzene:
+isBenzene:
 
     suffix=findGNs(suffix_subs,parent_chain.size(),cyclic,benzene,1);
     suffixes.push_back(suffix);
@@ -1429,7 +1498,7 @@ string compound::generateName(int in, int out)
         }
     }
 
-    isInorganic:
+isInorganic:
 
     //cerr<<"FOR IN/OUT: "<<in<<" "<<out<<" name: "<<name<<endl;
     //cerr<<"FOR IN/OUT: "<<in<<" "<<out<<" name: "<<name<<endl;

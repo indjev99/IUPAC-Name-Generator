@@ -683,7 +683,7 @@ void drawCompound(GLFWwindow* w, compound& c)
         if (a.symbol=="") continue;
         p=-1;
         if (i<c.atoms_unions.size()) p=c.atoms_unions[i];
-        //setTextColour(p);
+        setTextColour(p);
         drawAtom(a);
     }
 }

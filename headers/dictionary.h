@@ -20,7 +20,7 @@ struct dictionary
     unordered_map<string, string> FGP; //functional_group_prefixes
     unordered_map<string, string> FGS; //functional_group_suffixes
     string benz;
-    string phen;
+    string pheno;
 
     string getCNP(int CN);
     string getNP(int ST);
