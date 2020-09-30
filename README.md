@@ -6,3 +6,5 @@ Generates the IUPAC names of organic compounds. Also does the reverse thing.
 
 
 This project uses the GLFW library and OpenGL.
+
+Download executable: https://sourceforge.net/projects/iupac-name-generator/
